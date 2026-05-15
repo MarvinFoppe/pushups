@@ -80,6 +80,61 @@
     letter-spacing: 0.1em;
     text-transform: uppercase;
   }
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .sync-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .sync-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #888;
+    transition: background 0.3s;
+  }
+  .sync-dot.online { background: var(--success); box-shadow: 0 0 6px rgba(68, 204, 136, 0.6); }
+  .sync-dot.syncing { background: var(--accent); animation: pulse 1s infinite; }
+  .sync-dot.error { background: #ff3344; }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  .btn-auth {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 6px 14px;
+    font-family: 'Archivo', sans-serif;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn-auth:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .btn-auth img {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+  }
 
   /* COUNTER HERO */
   .hero {
@@ -921,7 +976,14 @@
 
   <div class="header">
     <div class="brand">MISSION <span>1.000.000</span></div>
-    <div class="header-meta" id="todayLabel">—</div>
+    <div class="header-right">
+      <div class="sync-status" id="syncStatus" title="Sync-Status">
+        <span class="sync-dot" id="syncDot"></span>
+        <span id="syncText">Offline</span>
+      </div>
+      <button class="btn-auth" id="authBtn">Anmelden</button>
+      <div class="header-meta" id="todayLabel">—</div>
+    </div>
   </div>
 
   <!-- HERO COUNTER -->
@@ -1061,7 +1123,32 @@
 
 <div class="tooltip" id="tooltip"></div>
 
-<script>
+<script type="module">
+// ============================================================
+// FIREBASE SETUP
+// ============================================================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import {
+  getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+import {
+  getFirestore, doc, getDoc, setDoc, onSnapshot, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCPIB8YdzOxctNEjiz2EYtbm7sBRERjRec",
+  authDomain: "pushups-d72da.firebaseapp.com",
+  projectId: "pushups-d72da",
+  storageBucket: "pushups-d72da.firebasestorage.app",
+  messagingSenderId: "735316000865",
+  appId: "1:735316000865:web:877e5f9518adbfceb7ea20"
+};
+const fbApp = initializeApp(firebaseConfig);
+const fbAuth = getAuth(fbApp);
+const fbDb = getFirestore(fbApp);
+const googleProvider = new GoogleAuthProvider();
+
+
 // ============================================================
 // CONFIG & DATA
 // ============================================================
@@ -1163,7 +1250,10 @@ function load() {
   } catch(e) { console.warn('Load failed', e); }
 }
 function save() {
+  state.updatedAt = Date.now();  // local timestamp für conflict resolution
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  // Cloud-Push (debounced)
+  scheduleCloudPush();
 }
 
 // ============================================================
@@ -1887,6 +1977,7 @@ function deleteEntry(id) {
   revoked.forEach(b => showToast(b, 'revoke'));
   render();
 }
+window.deleteEntry = deleteEntry;
 
 function editEntry(id) {
   const e = state.entries.find(x => x.id === id);
@@ -1903,6 +1994,7 @@ function editEntry(id) {
   revoked.forEach(b => showToast(b, 'revoke'));
   render();
 }
+window.editEntry = editEntry;
 
 // ============================================================
 // INIT
@@ -1969,6 +2061,166 @@ document.getElementById('importFile').addEventListener('change', e => {
 });
 
 render();
+
+// ============================================================
+// FIREBASE AUTH & SYNC
+// ============================================================
+let currentUser = null;
+let cloudUnsubscribe = null;
+let pushTimeout = null;
+let suppressNextSnapshot = false; // verhindert Sync-Loop nach eigenem Push
+
+function setSyncStatus(status, text) {
+  const dot = document.getElementById('syncDot');
+  const txt = document.getElementById('syncText');
+  dot.className = 'sync-dot' + (status ? ' ' + status : '');
+  txt.textContent = text;
+}
+
+function userDocRef(uid) {
+  return doc(fbDb, 'users', uid);
+}
+
+async function pushToCloud() {
+  if (!currentUser) return;
+  try {
+    setSyncStatus('syncing', 'Sync...');
+    suppressNextSnapshot = true;
+    await setDoc(userDocRef(currentUser.uid), {
+      state: state,
+      updatedAt: state.updatedAt || Date.now(),
+      lastDevice: navigator.userAgent.slice(0, 80)
+    });
+    setSyncStatus('online', 'Synced');
+  } catch (e) {
+    console.error('Cloud push failed', e);
+    setSyncStatus('error', 'Sync-Fehler');
+  }
+}
+
+function scheduleCloudPush() {
+  if (!currentUser) return;
+  clearTimeout(pushTimeout);
+  pushTimeout = setTimeout(pushToCloud, 800);
+}
+
+async function pullFromCloudAndMerge() {
+  if (!currentUser) return;
+  try {
+    setSyncStatus('syncing', 'Lade...');
+    const snap = await getDoc(userDocRef(currentUser.uid));
+    if (!snap.exists()) {
+      // Cloud leer → lokalen State hochpushen
+      console.log('Cloud leer, pushe lokalen State');
+      await pushToCloud();
+      return;
+    }
+    const cloud = snap.data();
+    const cloudState = cloud.state;
+    const cloudUpdatedAt = cloud.updatedAt || 0;
+    const localUpdatedAt = state.updatedAt || 0;
+
+    if (cloudUpdatedAt > localUpdatedAt) {
+      console.log('Cloud neuer, übernehme Cloud-State');
+      state = cloudState;
+      // ensure required fields
+      if (!state.entries) state.entries = [];
+      if (!state.badges) state.badges = {};
+      if (state.bingoCompletedRounds == null) state.bingoCompletedRounds = 0;
+      if (state.bingoStartTs == null) state.bingoStartTs = 0;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      entriesCollapse = null; // collapse-state neu initialisieren
+      render();
+      setSyncStatus('online', 'Synced');
+    } else if (localUpdatedAt > cloudUpdatedAt) {
+      console.log('Lokal neuer, pushe in Cloud');
+      await pushToCloud();
+    } else {
+      setSyncStatus('online', 'Synced');
+    }
+  } catch (e) {
+    console.error('Cloud pull failed', e);
+    setSyncStatus('error', 'Sync-Fehler');
+  }
+}
+
+function startRealtimeListener() {
+  if (!currentUser) return;
+  if (cloudUnsubscribe) cloudUnsubscribe();
+  cloudUnsubscribe = onSnapshot(userDocRef(currentUser.uid), (snap) => {
+    if (suppressNextSnapshot) {
+      // dieser Snapshot stammt von unserem eigenen Push → ignorieren
+      suppressNextSnapshot = false;
+      return;
+    }
+    if (!snap.exists()) return;
+    const cloud = snap.data();
+    const cloudUpdatedAt = cloud.updatedAt || 0;
+    const localUpdatedAt = state.updatedAt || 0;
+    if (cloudUpdatedAt > localUpdatedAt) {
+      console.log('Realtime update aus Cloud');
+      state = cloud.state;
+      if (!state.entries) state.entries = [];
+      if (!state.badges) state.badges = {};
+      if (state.bingoCompletedRounds == null) state.bingoCompletedRounds = 0;
+      if (state.bingoStartTs == null) state.bingoStartTs = 0;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      entriesCollapse = null;
+      render();
+      setSyncStatus('online', 'Synced');
+    }
+  }, (err) => {
+    console.error('Realtime listener error', err);
+    setSyncStatus('error', 'Verbindungsfehler');
+  });
+}
+
+function stopRealtimeListener() {
+  if (cloudUnsubscribe) { cloudUnsubscribe(); cloudUnsubscribe = null; }
+}
+
+function updateAuthUI() {
+  const btn = document.getElementById('authBtn');
+  if (currentUser) {
+    const photo = currentUser.photoURL;
+    const name = currentUser.displayName || currentUser.email || 'User';
+    btn.innerHTML = (photo ? `<img src="${photo}" alt="">` : '') +
+                    `<span>${name.split(' ')[0]}</span><span style="opacity:0.5;margin-left:6px;">×</span>`;
+    btn.title = 'Abmelden (' + name + ')';
+  } else {
+    btn.innerHTML = '<span>Anmelden</span>';
+    btn.title = 'Mit Google anmelden für Geräte-Sync';
+    setSyncStatus('', 'Offline');
+  }
+}
+
+document.getElementById('authBtn').addEventListener('click', async () => {
+  if (currentUser) {
+    if (confirm('Abmelden? Sync wird deaktiviert. Lokale Daten bleiben auf diesem Gerät.')) {
+      await signOut(fbAuth);
+    }
+  } else {
+    try {
+      await signInWithPopup(fbAuth, googleProvider);
+    } catch (e) {
+      console.error('Login fehlgeschlagen', e);
+      if (e.code !== 'auth/popup-closed-by-user') {
+        alert('Login fehlgeschlagen: ' + (e.message || e.code));
+      }
+    }
+  }
+});
+
+onAuthStateChanged(fbAuth, async (user) => {
+  currentUser = user;
+  updateAuthUI();
+  if (user) {
+    await pullFromCloudAndMerge();
+    startRealtimeListener();
+  } else {
+    stopRealtimeListener();
+  }
+});
 </script>
 </body>
 </html>
