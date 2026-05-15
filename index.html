@@ -1,0 +1,1974 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>1 Million Liegestütze</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;700&family=Archivo:wght@400;600;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #58585f;
+    --bg-elev: #6a6a72;
+    --bg-elev-2: #7a7a82;
+    --border: #888892;
+    --text: #ffffff;
+    --text-dim: #e0ddd6;
+    --text-faint: #b8b4ad;
+    --accent: #ff6633;
+    --accent-2: #ffaa55;
+    --accent-glow: rgba(255, 102, 51, 0.4);
+    --success: #44cc88;
+    --locked: #7a7a82;
+    --locked-text: #b8b4ad;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Archivo', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(circle at 10% 0%, rgba(255, 102, 51, 0.1), transparent 40%),
+      radial-gradient(circle at 90% 100%, rgba(255, 170, 85, 0.06), transparent 40%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 32px 24px 80px;
+  }
+
+  /* HEADER */
+  .header {
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 24px;
+    margin-bottom: 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .brand {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 0.15em;
+    color: var(--text);
+  }
+  .brand span { color: var(--accent); }
+
+  .header-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* COUNTER HERO */
+  .hero {
+    background: linear-gradient(135deg, #707078 0%, #6a6a72 100%);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    padding: 36px 32px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 280px; height: 280px;
+    background: radial-gradient(circle, var(--accent-glow), transparent 70%);
+    transform: translate(40%, -40%);
+    pointer-events: none;
+  }
+
+  .hero-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .counter-row {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+
+  .counter-current {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(56px, 10vw, 120px);
+    line-height: 0.9;
+    letter-spacing: -0.02em;
+    background: linear-gradient(180deg, #ffffff 0%, #d8d5ce 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .counter-total {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(28px, 4vw, 48px);
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+  }
+
+  .counter-percent {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    color: var(--accent);
+    margin-left: auto;
+    padding: 6px 12px;
+    border: 1px solid var(--accent);
+    background: rgba(255, 102, 51, 0.15);
+  }
+
+  .progress-bar {
+    height: 14px;
+    background: #48484f;
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+  .progress-bar-fill {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    width: 0%;
+    transition: width 0.6s cubic-bezier(.2,.9,.2,1);
+    box-shadow: 0 0 20px var(--accent-glow);
+  }
+  .progress-bar-fill::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 8px,
+      rgba(255,255,255,0.08) 8px,
+      rgba(255,255,255,0.08) 16px
+    );
+  }
+
+  .hero-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 16px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+  .stat {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .stat-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+  }
+  .stat-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    line-height: 1;
+    color: var(--text);
+  }
+  .stat-value.accent { color: var(--accent); }
+  .stat-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-faint);
+  }
+
+  /* SECTIONS */
+  .section {
+    margin-bottom: 32px;
+  }
+
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 8px;
+  }
+  .section-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 0.1em;
+  }
+  .section-title-accent { color: var(--accent); }
+
+  /* GRID LAYOUT */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  @media (max-width: 900px) {
+    .grid-2 { grid-template-columns: 1fr; }
+  }
+
+  /* INPUT FORM */
+  .input-card {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  .input-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  @media (max-width: 600px) { .input-row { grid-template-columns: 1fr; } }
+
+  .input-group label {
+    display: block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 6px;
+  }
+  input[type="number"], input[type="date"] {
+    width: 100%;
+    background: #4a4a52;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px;
+    transition: border-color 0.2s;
+  }
+  input[type="number"]:focus, input[type="date"]:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  input[type="date"] {
+    color-scheme: dark;
+  }
+
+  button {
+    cursor: pointer;
+    font-family: 'Archivo', sans-serif;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    transition: all 0.2s;
+  }
+
+  .btn-primary {
+    width: 100%;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 14px;
+    font-size: 14px;
+    margin-top: 8px;
+  }
+  .btn-primary:hover {
+    background: var(--accent-2);
+    transform: translateY(-1px);
+  }
+  .btn-primary:active { transform: translateY(0); }
+
+  .btn-small {
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    font-size: 10px;
+  }
+  .btn-small:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  .btn-small.danger:hover {
+    color: #ff3344;
+    border-color: #ff3344;
+  }
+
+  /* ENTRIES LIST */
+  .entries-card {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    padding: 24px;
+    max-height: 600px;
+    overflow-y: auto;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  .entries-card::-webkit-scrollbar { width: 8px; }
+  .entries-card::-webkit-scrollbar-track { background: #58585f; }
+  .entries-card::-webkit-scrollbar-thumb { background: var(--border); }
+
+  .day-group {
+    border-bottom: 1px solid var(--border);
+    padding: 10px 0;
+  }
+  .day-group:last-child { border-bottom: none; }
+  .day-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .day-date {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text);
+  }
+  .day-total {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    color: var(--accent);
+  }
+  .entry-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0 4px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+  .entry-actions {
+    display: flex;
+    gap: 4px;
+  }
+
+  /* Tree (Jahr/Monat/Tag) */
+  .tree-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 6px 4px;
+    user-select: none;
+    transition: background 0.15s;
+  }
+  .tree-header:hover { background: rgba(255,255,255,0.05); }
+  .tree-arrow {
+    font-size: 9px;
+    color: var(--text-faint);
+    width: 12px;
+    display: inline-block;
+  }
+  .tree-label {
+    flex: 1;
+  }
+  .tree-total {
+    font-family: 'Bebas Neue', sans-serif;
+    color: var(--accent);
+  }
+  .tree-header-year {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 0.08em;
+    border-top: 1px solid var(--border);
+    padding-top: 12px;
+    padding-bottom: 10px;
+  }
+  .tree-year:first-child .tree-header-year { border-top: none; padding-top: 6px; }
+  .tree-header-year .tree-total { font-size: 22px; }
+
+  .tree-header-month {
+    font-family: 'Archivo', sans-serif;
+    font-weight: 800;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text);
+    padding-left: 16px;
+  }
+  .tree-header-month .tree-total { font-size: 16px; }
+
+  .tree-header-day {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+    padding-left: 28px;
+  }
+  .tree-header-day .tree-total { font-size: 14px; color: var(--text); }
+
+  .tree-day .entry-item { padding-left: 44px; }
+
+  .empty {
+    text-align: center;
+    padding: 32px;
+    color: var(--text-faint);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+
+  /* BINGO */
+  .bingo-card {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .bingo-badge-row {
+    margin-bottom: 20px;
+    width: 100%;
+    max-width: 600px;
+  }
+  .bingo-badge {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    background: #4a4a52;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    transition: all 0.3s;
+  }
+  .bingo-badge.has-bingo {
+    background: linear-gradient(135deg, #707078 0%, #806b5a 100%);
+    border-color: var(--accent);
+    box-shadow: 0 2px 10px rgba(255, 102, 51, 0.25);
+  }
+  .bingo-badge-icon {
+    font-size: 28px;
+    filter: grayscale(1);
+    opacity: 0.4;
+    line-height: 1;
+  }
+  .bingo-badge.has-bingo .bingo-badge-icon {
+    filter: none;
+    opacity: 1;
+  }
+  .bingo-badge-info {
+    flex: 1;
+  }
+  .bingo-badge-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    letter-spacing: 0.05em;
+    color: var(--text-faint);
+  }
+  .bingo-badge.has-bingo .bingo-badge-title { color: var(--text); }
+  .bingo-badge-desc {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-faint);
+    margin-top: 2px;
+  }
+  .bingo-badge.has-bingo .bingo-badge-desc { color: var(--text-dim); }
+  .bingo-badge-counter {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 32px;
+    color: var(--text-faint);
+    letter-spacing: -0.02em;
+    min-width: 60px;
+    text-align: right;
+  }
+  .bingo-badge.has-bingo .bingo-badge-counter { color: var(--accent); }
+
+  .bingo-grid {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 6px;
+    width: 100%;
+    max-width: 600px;
+  }
+  .bingo-cell {
+    aspect-ratio: 1;
+    background: #4a4a52;
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-faint);
+    transition: all 0.3s;
+    border-radius: 2px;
+  }
+  .bingo-cell.hit {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    border-color: var(--accent);
+    color: #fff;
+    box-shadow: 0 0 8px var(--accent-glow);
+    transform: scale(1.02);
+  }
+  /* CHART */
+  .chart-card {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  #chart30 {
+    width: 100%;
+    height: 280px;
+    display: block;
+  }
+
+  /* HEATMAP */
+  .heatmap-card {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    padding: 24px;
+    overflow-x: auto;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  .heatmap {
+    display: grid;
+    grid-auto-flow: column;
+    grid-template-rows: repeat(7, 14px);
+    gap: 3px;
+    min-width: 800px;
+  }
+  .heat-cell {
+    width: 14px;
+    height: 14px;
+    background: #6a2a10;
+    border-radius: 2px;
+    transition: transform 0.15s;
+    cursor: pointer;
+  }
+  .heat-cell:hover {
+    transform: scale(1.4);
+    outline: 1px solid #fff;
+  }
+  .heat-cell.empty-day { background: #7a3318; }
+  .heat-1 { background: #d27a4c; }
+  .heat-2 { background: #e89060; }
+  .heat-3 { background: #ffaa55; }
+  .heat-4 { background: #ffc880; }
+  .heat-5 { background: #ffe699; box-shadow: 0 0 8px rgba(255, 230, 153, 0.6); }
+
+  .heatmap-legend {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+  .legend-cells { display: flex; gap: 3px; }
+
+  .heatmap-year-selector {
+    display: flex;
+    gap: 8px;
+  }
+  .year-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 4px 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+  }
+  .year-btn.active {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  /* BADGES */
+  .badges-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+  }
+
+  .badge {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    padding: 14px;
+    position: relative;
+    transition: all 0.3s;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+  }
+  .badge.unlocked {
+    border-color: var(--accent);
+    background: linear-gradient(135deg, #707078 0%, #806b5a 100%);
+    box-shadow: 0 2px 10px rgba(255, 102, 51, 0.25);
+  }
+  .badge.unlocked::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 4px; height: 100%;
+    background: linear-gradient(180deg, var(--accent), var(--accent-2));
+  }
+
+  .badge-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .badge-icon {
+    font-size: 24px;
+    filter: grayscale(1);
+    opacity: 0.4;
+    line-height: 1;
+  }
+  .badge.unlocked .badge-icon {
+    filter: none;
+    opacity: 1;
+  }
+
+  .badge-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 16px;
+    letter-spacing: 0.05em;
+    color: var(--locked-text);
+    line-height: 1.1;
+  }
+  .badge.unlocked .badge-title { color: var(--text); }
+
+  .badge-desc {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-faint);
+    margin-bottom: 8px;
+    line-height: 1.4;
+  }
+  .badge.unlocked .badge-desc { color: var(--text-dim); }
+
+  .badge-progress-bar {
+    height: 4px;
+    background: #48484f;
+    overflow: hidden;
+    margin-bottom: 4px;
+  }
+  .badge-progress-fill {
+    height: 100%;
+    background: #a8a4a0;
+    transition: width 0.4s;
+  }
+  .badge.unlocked .badge-progress-fill {
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  }
+
+  .badge-progress-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-faint);
+    display: flex;
+    justify-content: space-between;
+  }
+  .badge.unlocked .badge-progress-text { color: var(--text-dim); }
+
+  .badge-unlocked-date {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--accent);
+    margin-top: 6px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* BADGE CATEGORIES */
+  .badge-cat {
+    margin-bottom: 24px;
+  }
+  .badge-cat-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .badge-cat-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+  .badge-cat-count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+  }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--bg-elev);
+    border: 1px solid var(--accent);
+    border-left: 4px solid var(--accent);
+    padding: 16px 20px;
+    z-index: 100;
+    transform: translateX(120%);
+    transition: transform 0.4s cubic-bezier(.2,.9,.2,1);
+    max-width: 320px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  .toast.show { transform: translateX(0); }
+  .toast.revoke {
+    border-color: var(--text-faint);
+    border-left-color: var(--text-faint);
+  }
+  .toast.revoke .toast-label { color: var(--text-faint); }
+  .toast-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .toast-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    letter-spacing: 0.05em;
+  }
+  .toast-desc {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+
+  /* FOOTER */
+  .footer {
+    margin-top: 48px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-faint);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .footer button {
+    background: transparent;
+    color: var(--text-faint);
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    font-size: 10px;
+  }
+  .footer button:hover { color: #ff3344; border-color: #ff3344; }
+
+  .tooltip {
+    position: fixed;
+    background: #1f1f23;
+    color: #fff;
+    border: 1px solid var(--accent);
+    padding: 6px 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    pointer-events: none;
+    z-index: 200;
+    display: none;
+    white-space: nowrap;
+  }
+  /* === MOBILE / RESPONSIVE === */
+
+  /* Tablet & kleiner */
+  @media (max-width: 900px) {
+    .container { padding: 20px 14px 60px; }
+    .header { padding-bottom: 16px; margin-bottom: 20px; }
+    .brand { font-size: 22px; }
+    .hero { padding: 24px 20px; }
+    .hero-stats { grid-template-columns: repeat(2, 1fr); gap: 12px; padding-top: 16px; }
+    .stat-value { font-size: 24px; }
+    .section { margin-bottom: 24px; }
+    .section-title { font-size: 18px; }
+    .input-card, .entries-card, .chart-card, .bingo-card { padding: 16px; }
+    .entries-card { max-height: 480px; }
+  }
+
+  /* Phone */
+  @media (max-width: 600px) {
+    .container { padding: 14px 10px 50px; }
+    .header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 6px;
+    }
+    .brand { font-size: 20px; letter-spacing: 0.1em; }
+    .header-meta { font-size: 10px; }
+
+    .hero { padding: 18px 16px; border-left-width: 3px; }
+    .hero::after { width: 180px; height: 180px; }
+    .counter-row { gap: 6px; align-items: flex-end; }
+    .counter-total { font-size: 22px; }
+    .counter-percent {
+      width: 100%;
+      margin-left: 0;
+      margin-top: 8px;
+      text-align: center;
+      font-size: 12px;
+    }
+    .hero-stats { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .stat-label { font-size: 9px; letter-spacing: 0.1em; }
+    .stat-value { font-size: 22px; }
+    .stat-sub { font-size: 9px; }
+    .progress-bar { margin-bottom: 18px; }
+
+    /* Inputs */
+    input[type="number"], input[type="date"] { font-size: 16px; padding: 10px; } /* 16px verhindert iOS-Zoom */
+    .input-row { grid-template-columns: 1fr; gap: 10px; }
+    .btn-primary { padding: 14px; font-size: 13px; }
+
+    /* Section Title mit Counter darunter umbrechen lassen */
+    .section-header { flex-wrap: wrap; gap: 6px; }
+    .section-title { font-size: 16px; }
+
+    /* Chart: weniger Padding links, kleinere Schrift, Werte-Labels nur jeder 2. Tag */
+    #chart30 { height: 240px; }
+
+    /* Bingo: kleinere Zellen, kleinere Schrift */
+    .bingo-card { padding: 14px 10px; }
+    .bingo-grid { gap: 3px; }
+    .bingo-cell { font-size: 11px; }
+    .bingo-badge { padding: 10px 12px; gap: 10px; }
+    .bingo-badge-icon { font-size: 22px; }
+    .bingo-badge-title { font-size: 15px; }
+    .bingo-badge-desc { font-size: 9px; }
+    .bingo-badge-counter { font-size: 24px; min-width: 44px; }
+
+    /* Badges */
+    .badges-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
+    .badge { padding: 10px; }
+    .badge-title { font-size: 14px; }
+    .badge-desc { font-size: 9px; }
+    .badge-progress-text { font-size: 9px; }
+    .badge-icon { font-size: 20px; }
+    .badge-cat-title { font-size: 16px; }
+
+    /* Tree */
+    .tree-header-year { font-size: 18px; padding-top: 10px; padding-bottom: 8px; }
+    .tree-header-year .tree-total { font-size: 18px; }
+    .tree-header-month { font-size: 12px; padding-left: 12px; }
+    .tree-header-month .tree-total { font-size: 14px; }
+    .tree-header-day { font-size: 11px; padding-left: 22px; }
+    .tree-header-day .tree-total { font-size: 13px; }
+    .tree-day .entry-item { padding-left: 32px; font-size: 11px; }
+    .btn-small { padding: 6px 10px; font-size: 11px; } /* größere Touch-Targets */
+
+    /* Footer */
+    .footer {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+      text-align: center;
+    }
+    .footer button { width: 100%; padding: 10px; font-size: 11px; }
+
+    /* Toast */
+    .toast {
+      left: 10px;
+      right: 10px;
+      bottom: 10px;
+      max-width: none;
+      padding: 14px 16px;
+    }
+  }
+
+  /* Touch-Geräte: deaktiviere Hover-Scaling auf Bingo & Heat-Cells (kein echtes Hover) */
+  @media (hover: none) {
+    .heat-cell:hover, .bingo-cell:hover { transform: none; outline: none; }
+    .badge:hover { transform: none; }
+  }
+
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="brand">MISSION <span>1.000.000</span></div>
+    <div class="header-meta" id="todayLabel">—</div>
+  </div>
+
+  <!-- HERO COUNTER -->
+  <div class="hero">
+    <div class="hero-label">Gesamtfortschritt</div>
+    <div class="counter-row">
+      <div class="counter-current" id="counterCurrent">0</div>
+      <div class="counter-total">/ 1.000.000</div>
+      <div class="counter-percent" id="counterPercent">0.000%</div>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-bar-fill" id="progressFill"></div>
+    </div>
+    <div class="hero-stats">
+      <div class="stat">
+        <div class="stat-label">Predicted Finish</div>
+        <div class="stat-value accent" id="predictedFinish">—</div>
+        <div class="stat-sub" id="predictedYears">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Daily Avg</div>
+        <div class="stat-value" id="dailyAvg">0</div>
+        <div class="stat-sub" id="daysActive">0 Tage</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Aktuelle Streak</div>
+        <div class="stat-value" id="currentStreak">0</div>
+        <div class="stat-sub">Tage in Folge</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Tagesrekord</div>
+        <div class="stat-value" id="recordDay">0</div>
+        <div class="stat-sub" id="recordDayDate">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Bestes Set</div>
+        <div class="stat-value" id="recordSet">0</div>
+        <div class="stat-sub" id="recordSetDate">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Wochenrekord</div>
+        <div class="stat-value" id="recordWeek">0</div>
+        <div class="stat-sub" id="recordWeekDate">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Monatsrekord</div>
+        <div class="stat-value" id="recordMonth">0</div>
+        <div class="stat-sub" id="recordMonthDate">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INPUT + ENTRIES -->
+  <div class="grid-2">
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title"><span class="section-title-accent">›</span> Eintrag</div>
+      </div>
+      <div class="input-card">
+        <div class="input-row">
+          <div class="input-group">
+            <label for="inputCount">Liegestütze</label>
+            <input type="number" id="inputCount" min="1" placeholder="z. B. 50">
+          </div>
+          <div class="input-group">
+            <label for="inputDate">Datum</label>
+            <input type="date" id="inputDate">
+          </div>
+        </div>
+        <button class="btn-primary" id="addBtn">+ Hinzufügen</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title"><span class="section-title-accent">›</span> Letzte Einträge</div>
+      </div>
+      <div class="entries-card" id="entriesList">
+        <div class="empty">Noch keine Einträge.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHART -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title"><span class="section-title-accent">›</span> Letzte 30 Tage</div>
+    </div>
+    <div class="chart-card">
+      <svg id="chart30" viewBox="0 0 900 320" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+  </div>
+
+  <!-- BINGO 1-100 -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title"><span class="section-title-accent">›</span> Zahlen-Bingo 1–100 <span id="bingoCount" style="color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:14px;margin-left:8px;">0 / 100</span></div>
+    </div>
+    <div class="bingo-card">
+      <div class="bingo-badge-row">
+        <div class="bingo-badge" id="bingoBadge" title="Vollständige Bingo-Runden">
+          <div class="bingo-badge-icon">🏆</div>
+          <div class="bingo-badge-info">
+            <div class="bingo-badge-title">Bingo voll gemacht</div>
+            <div class="bingo-badge-desc">Alle Zahlen von 1 bis 100 getroffen</div>
+          </div>
+          <div class="bingo-badge-counter"><span id="bingoBadgeCount">0</span>×</div>
+        </div>
+      </div>
+      <div class="bingo-grid" id="bingoGrid"></div>
+    </div>
+  </div>
+
+  <!-- BADGES -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title"><span class="section-title-accent">›</span> Badges <span id="badgeCount" style="color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:14px;margin-left:8px;">0 / 55</span></div>
+    </div>
+    <div id="badgesContainer"></div>
+  </div>
+
+  <div class="footer">
+    <div>1M Pushup Tracker · Local Storage</div>
+    <button id="exportBtn">Export JSON</button>
+    <button id="importBtn">Import JSON</button>
+    <input type="file" id="importFile" accept="application/json" style="display:none">
+    <button id="resetBtn">Reset All</button>
+  </div>
+
+</div>
+
+<div class="toast" id="toast">
+  <div class="toast-label" id="toastLabel">Badge freigeschaltet</div>
+  <div class="toast-title" id="toastTitle">—</div>
+  <div class="toast-desc" id="toastDesc">—</div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// ============================================================
+// CONFIG & DATA
+// ============================================================
+const STORAGE_KEY = 'pushup_tracker_v1';
+const TARGET = 1_000_000;
+const TODAY = new Date();
+TODAY.setHours(0,0,0,0);
+
+let state = {
+  startDate: null,         // ISO yyyy-mm-dd, set on first ever entry submission or today
+  entries: [],             // [{id, date: 'yyyy-mm-dd', count, ts}]
+  badges: {},              // {id: 'yyyy-mm-dd' (unlock date)}
+  bingoCompletedRounds: 0, // Anzahl voll gemachter Bingo-Runden
+  bingoStartTs: 0          // Timestamp ab dem die aktuelle Bingo-Runde gezählt wird
+};
+
+// ============================================================
+// BADGE DEFINITIONS
+// Each badge: {id, cat, icon, title, desc, target, getProgress(stats) => number 0..target}
+// ============================================================
+const BADGES = [
+  // === GESAMTZAHL (12) ===
+  ...[100,500,1000,5000,10000,25000,50000,100000,250000,500000,750000,1000000].map((n,i) => ({
+    id:'total_'+n, cat:'total', icon:'🎯',
+    title: n>=1000000 ? 'Mission Erfüllt' : `${n.toLocaleString('de-DE')} Total`,
+    desc: `${n.toLocaleString('de-DE')} Liegestütze insgesamt`,
+    target: n,
+    getProgress: s => Math.min(n, s.total)
+  })),
+
+  // === TAGESLEISTUNG (11) ===
+  ...[100,200,300,400,500,600,700,800,900,1000,1111].map(n => ({
+    id:'day_'+n, cat:'day', icon:'💪',
+    title: `${n} an einem Tag`,
+    desc: `${n} Liegestütze an einem einzigen Tag`,
+    target: n,
+    getProgress: s => Math.min(n, s.bestDay)
+  })),
+
+  // === BESTES SET (8) ===
+  ...[25,30,50,60,70,80,90,100].map(n => ({
+    id:'set_'+n, cat:'set', icon:'🎯',
+    title: `${n} am Stück`,
+    desc: `${n} Liegestütze in einer einzigen Einheit`,
+    target: n,
+    getProgress: s => Math.min(n, s.bestSet)
+  })),
+
+  // === STREAKS (8) ===
+  ...[3,7,14,30,60,100,200,365].map(n => ({
+    id:'streak_'+n, cat:'streak', icon:'🔥',
+    title: `${n}-Tage-Streak`,
+    desc: `${n} Tage in Folge mit mind. einem Eintrag`,
+    target: n,
+    getProgress: s => Math.min(n, s.bestStreak)
+  })),
+
+  // === KONSISTENZ (6) ===
+  {id:'cons_7_50',cat:'cons',icon:'⚡',title:'Solide Woche',desc:'7 Tage in Folge mit mind. 50 LS',target:7,getProgress:s=>Math.min(7,s.bestConsistency[50]||0)},
+  {id:'cons_7_100',cat:'cons',icon:'⚡',title:'Starke Woche',desc:'7 Tage in Folge mit mind. 100 LS',target:7,getProgress:s=>Math.min(7,s.bestConsistency[100]||0)},
+  {id:'cons_14_50',cat:'cons',icon:'⚡',title:'Zwei Wochen Disziplin',desc:'14 Tage in Folge mit mind. 50 LS',target:14,getProgress:s=>Math.min(14,s.bestConsistency[50]||0)},
+  {id:'cons_30_50',cat:'cons',icon:'⚡',title:'Monat der Wahrheit',desc:'30 Tage in Folge mit mind. 50 LS',target:30,getProgress:s=>Math.min(30,s.bestConsistency[50]||0)},
+  {id:'cons_30_100',cat:'cons',icon:'⚡',title:'Eiserner Monat',desc:'30 Tage in Folge mit mind. 100 LS',target:30,getProgress:s=>Math.min(30,s.bestConsistency[100]||0)},
+  {id:'cons_100_100',cat:'cons',icon:'⚡',title:'Maschine',desc:'100 Tage in Folge mit mind. 100 LS',target:100,getProgress:s=>Math.min(100,s.bestConsistency[100]||0)},
+
+  // === SPECIAL / FUN (10) ===
+  {id:'sp_first',cat:'special',icon:'🚀',title:'Erster Schritt',desc:'Allererster Eintrag',target:1,getProgress:s=>s.entries>0?1:0},
+  {id:'sp_3k30',cat:'special',icon:'📅',title:'Monatsziel',desc:'3.000+ LS in 30 aufeinanderfolgenden Tagen',target:3000,getProgress:s=>Math.min(3000,s.bestWindow[30]||0)},
+  {id:'sp_10k30',cat:'special',icon:'📅',title:'Großer Monat',desc:'10.000+ LS in 30 aufeinanderfolgenden Tagen',target:10000,getProgress:s=>Math.min(10000,s.bestWindow[30]||0)},
+  {id:'sp_25k90',cat:'special',icon:'🗓️',title:'Quartal',desc:'25.000+ LS in 90 aufeinanderfolgenden Tagen',target:25000,getProgress:s=>Math.min(25000,s.bestWindow[90]||0)},
+  {id:'sp_100k365',cat:'special',icon:'🏅',title:'Jahresleistung',desc:'100.000+ LS in 365 aufeinanderfolgenden Tagen',target:100000,getProgress:s=>Math.min(100000,s.bestWindow[365]||0)},
+  {id:'sp_10k10',cat:'special',icon:'🏃',title:'Solider Lauf',desc:'10.000+ LS in 10 aufeinanderfolgenden Tagen',target:10000,getProgress:s=>Math.min(10000,s.bestWindow[10]||0)},
+  {id:'sp_calendar',cat:'special',icon:'🗓️',title:'Kalender-Komplettist',desc:'An jedem der 365 Kalendertage (ohne 29.2.) mind. 1× trainiert',target:365,getProgress:s=>Math.min(365,s.uniqueCalendarDays)},
+  {id:'sp_track',cat:'special',icon:'🎯',title:'On Track',desc:'Tagesdurchschnitt von 100+ LS halten',target:100,getProgress:s=>Math.min(100, Math.round(s.dailyAvg)), customProgressText: s => `${Math.round(s.dailyAvg)} / 100 LS Ø/Tag`},
+  {id:'sp_speed',cat:'special',icon:'⚡',title:'Speedrun',desc:'Tagesdurchschnitt von 250+ LS halten',target:250,getProgress:s=>Math.min(250, Math.round(s.dailyAvg)), customProgressText: s => `${Math.round(s.dailyAvg)} / 250 LS Ø/Tag`},
+  {id:'sp_endgame',cat:'special',icon:'🏁',title:'Endspurt',desc:'Letzte 100.000 bis zur Million erreicht',target:100000,getProgress:s=>Math.max(0, Math.min(100000, s.total - 900000))},
+];
+
+const CATEGORIES = [
+  {key:'total', label:'🎯 Gesamtzahl'},
+  {key:'day', label:'💪 Tagesleistung'},
+  {key:'set', label:'🎯 Bestes Set'},
+  {key:'streak', label:'🔥 Streaks'},
+  {key:'cons', label:'⚡ Konsistenz'},
+  {key:'special', label:'🏆 Special'},
+];
+
+// ============================================================
+// STORAGE
+// ============================================================
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) state = JSON.parse(raw);
+    if (!state.entries) state.entries = [];
+    if (!state.badges) state.badges = {};
+    if (state.bingoCompletedRounds == null) state.bingoCompletedRounds = 0;
+    if (state.bingoStartTs == null) state.bingoStartTs = 0;
+  } catch(e) { console.warn('Load failed', e); }
+}
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function fmtDate(d) {
+  if (typeof d === 'string') d = new Date(d);
+  // Berlin time (Europe/Berlin), YYYY-MM-DD
+  // Use Intl to get the date components in Berlin timezone
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Berlin',
+    year: 'numeric', month: '2-digit', day: '2-digit'
+  }).formatToParts(d);
+  const y = parts.find(p => p.type === 'year').value;
+  const m = parts.find(p => p.type === 'month').value;
+  const day = parts.find(p => p.type === 'day').value;
+  return `${y}-${m}-${day}`;
+}
+function fmtDateDe(iso) {
+  if (!iso) return '—';
+  const [y,m,d] = iso.split('-');
+  return `${d}.${m}.${y}`;
+}
+function todayISO() { return fmtDate(TODAY); }
+function daysBetween(isoA, isoB) {
+  return Math.round((new Date(isoB) - new Date(isoA)) / 86400000);
+}
+function addDays(iso, n) {
+  const d = new Date(iso);
+  d.setDate(d.getDate() + n);
+  return fmtDate(d);
+}
+
+// ============================================================
+// STATS COMPUTATION
+// ============================================================
+function computeStats() {
+  const entries = state.entries;
+  const byDate = {};
+  for (const e of entries) {
+    byDate[e.date] = (byDate[e.date] || 0) + e.count;
+  }
+
+  const dates = Object.keys(byDate).sort();
+  const total = entries.reduce((s,e)=>s+e.count, 0);
+
+  // Best day
+  let bestDay = 0, bestDayDate = null;
+  for (const d of dates) {
+    if (byDate[d] > bestDay) { bestDay = byDate[d]; bestDayDate = d; }
+  }
+
+  // Best single set (höchster Einzeleintrag)
+  let bestSet = 0, bestSetDate = null;
+  for (const e of entries) {
+    if (e.count > bestSet) { bestSet = e.count; bestSetDate = e.date; }
+  }
+
+  // Best week (rolling 7 days) & best month (rolling 30 days)
+  // For records: highest sum in any 7/30 consecutive calendar days, ending on a date
+  let bestWeek = 0, bestWeekEnd = null;
+  let bestMonth = 0, bestMonthEnd = null;
+  if (dates.length > 0) {
+    const firstD = dates[0];
+    const lastD = dates[dates.length-1];
+    const span = daysBetween(firstD, lastD) + 1;
+    // build array of daily counts from firstD to lastD
+    const arr = new Array(span).fill(0);
+    for (let i=0; i<span; i++) {
+      arr[i] = byDate[addDays(firstD, i)] || 0;
+    }
+    // rolling sums
+    function rolling(windowSize) {
+      let best = 0, bestEnd = null;
+      let sum = 0;
+      for (let i=0; i<arr.length; i++) {
+        sum += arr[i];
+        if (i >= windowSize) sum -= arr[i - windowSize];
+        if (i >= windowSize - 1 && sum > best) {
+          best = sum;
+          bestEnd = addDays(firstD, i);
+        }
+      }
+      // also handle case where total span is shorter than window (single rolling)
+      if (arr.length < windowSize) {
+        const total = arr.reduce((a,b)=>a+b,0);
+        if (total > best) { best = total; bestEnd = lastD; }
+      }
+      return {best, bestEnd};
+    }
+    ({best: bestWeek, bestEnd: bestWeekEnd} = rolling(7));
+    ({best: bestMonth, bestEnd: bestMonthEnd} = rolling(30));
+  }
+
+  // Streaks: consecutive days with at least 1 LS
+  // Best streak (any time) and current streak (ending today or yesterday)
+  let bestStreak = 0;
+  let currentStreak = 0;
+  if (dates.length > 0) {
+    let run = 0;
+    let prevDate = null;
+    for (const d of dates) {
+      if (prevDate === null || daysBetween(prevDate, d) === 1) run++;
+      else run = 1;
+      if (run > bestStreak) bestStreak = run;
+      prevDate = d;
+    }
+    // current streak: count back from today
+    let cur = 0;
+    let cursor = todayISO();
+    // if no entry today, allow starting from yesterday only if there's an entry yesterday
+    if (!byDate[cursor]) cursor = addDays(cursor, -1);
+    while (byDate[cursor]) { cur++; cursor = addDays(cursor, -1); }
+    currentStreak = cur;
+  }
+
+  // Consistency streaks: longest run of consecutive days with >= threshold
+  function bestConsistencyFor(threshold) {
+    let best = 0, run = 0, prev = null;
+    for (const d of dates) {
+      if (byDate[d] >= threshold) {
+        if (prev !== null && daysBetween(prev, d) === 1) run++;
+        else run = 1;
+        if (run > best) best = run;
+      } else {
+        run = 0;
+      }
+      prev = d;
+    }
+    return best;
+  }
+  const bestConsistency = {
+    50: bestConsistencyFor(50),
+    100: bestConsistencyFor(100)
+  };
+
+  // Best window sums for 30/90/100/365
+  const windowSizes = [10, 30, 90, 365];
+  const bestWindow = {};
+  if (dates.length > 0) {
+    const firstD = dates[0];
+    const lastD = dates[dates.length-1];
+    const span = daysBetween(firstD, lastD) + 1;
+    const arr = new Array(span).fill(0);
+    for (let i=0; i<span; i++) arr[i] = byDate[addDays(firstD, i)] || 0;
+    for (const w of windowSizes) {
+      let best = 0, sum = 0;
+      for (let i=0; i<arr.length; i++) {
+        sum += arr[i];
+        if (i >= w) sum -= arr[i - w];
+        if (i >= w - 1 && sum > best) best = sum;
+      }
+      // if span < window, all-time sum counts
+      if (arr.length < w) {
+        const t = arr.reduce((a,b)=>a+b,0);
+        if (t > best) best = t;
+      }
+      bestWindow[w] = best;
+    }
+  } else {
+    for (const w of windowSizes) bestWindow[w] = 0;
+  }
+
+  // Unique calendar days (MM-DD, excluding 02-29)
+  const calSet = new Set();
+  for (const d of dates) {
+    const mmdd = d.slice(5);
+    if (mmdd !== '02-29') calSet.add(mmdd);
+  }
+  const uniqueCalendarDays = calSet.size;
+
+  // Predicted finish: based on average since first entry (or state.startDate as fallback)
+  let predictedFinish = null;
+  let predictedYears = null;
+  let dailyAvg = 0;
+  let daysActiveTotal = 0;
+  // Use earliest entry date as start; fallback to state.startDate, fallback to today
+  const effectiveStart = dates.length > 0 ? dates[0] : (state.startDate || todayISO());
+  const today = todayISO();
+  daysActiveTotal = Math.max(1, daysBetween(effectiveStart, today) + 1);
+  if (total > 0) {
+    dailyAvg = total / daysActiveTotal;
+    if (total < TARGET) {
+      const remaining = TARGET - total;
+      const daysNeeded = Math.ceil(remaining / dailyAvg);
+      const finish = new Date(today);
+      finish.setDate(finish.getDate() + daysNeeded);
+      predictedFinish = fmtDate(finish);
+      predictedYears = daysNeeded / 365.25;
+    } else {
+      predictedFinish = today;
+      predictedYears = 0;
+    }
+  }
+
+  return {
+    total,
+    bestDay, bestDayDate,
+    bestSet, bestSetDate,
+    bestWeek, bestWeekEnd,
+    bestMonth, bestMonthEnd,
+    bestStreak, currentStreak,
+    bestConsistency,
+    bestWindow,
+    uniqueCalendarDays,
+    predictedFinish, predictedYears,
+    dailyAvg, daysActiveTotal,
+    entries: entries.length,
+    byDate
+  };
+}
+
+// ============================================================
+// BADGE LOGIC
+// ============================================================
+function checkBadges(stats) {
+  const newlyUnlocked = [];
+  const revoked = [];
+  for (const b of BADGES) {
+    const prog = b.getProgress(stats);
+    const meets = prog >= b.target;
+    const has = !!state.badges[b.id];
+    if (meets && !has) {
+      state.badges[b.id] = todayISO();
+      newlyUnlocked.push(b);
+    } else if (!meets && has) {
+      delete state.badges[b.id];
+      revoked.push(b);
+    }
+  }
+  return {newlyUnlocked, revoked};
+}
+
+let toastQueue = [];
+let toastShowing = false;
+function showToast(badge, type='unlock') {
+  toastQueue.push({badge, type});
+  if (!toastShowing) processToastQueue();
+}
+function processToastQueue() {
+  if (toastQueue.length === 0) { toastShowing = false; return; }
+  toastShowing = true;
+  const {badge: b, type} = toastQueue.shift();
+  const t = document.getElementById('toast');
+  if (type === 'revoke') {
+    t.classList.add('revoke');
+    document.getElementById('toastLabel').textContent = 'Badge verloren';
+    document.getElementById('toastTitle').textContent = b.icon + ' ' + b.title;
+    document.getElementById('toastDesc').textContent = 'Bedingung nicht mehr erfüllt';
+  } else {
+    t.classList.remove('revoke');
+    document.getElementById('toastLabel').textContent = 'Badge freigeschaltet';
+    document.getElementById('toastTitle').textContent = b.icon + ' ' + b.title;
+    document.getElementById('toastDesc').textContent = b.desc;
+  }
+  t.classList.add('show');
+  setTimeout(() => {
+    t.classList.remove('show');
+    setTimeout(processToastQueue, 400);
+  }, 3500);
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function render() {
+  const stats = computeStats();
+  // counter
+  document.getElementById('counterCurrent').textContent = stats.total.toLocaleString('de-DE');
+  const pct = (stats.total / TARGET) * 100;
+  document.getElementById('counterPercent').textContent = pct.toFixed(3) + '%';
+  document.getElementById('progressFill').style.width = Math.min(100, pct) + '%';
+
+  // hero stats
+  document.getElementById('predictedFinish').textContent = stats.predictedFinish ? fmtDateDe(stats.predictedFinish) : '—';
+  document.getElementById('predictedYears').textContent = stats.predictedYears != null
+    ? (stats.predictedYears < 0.1 ? 'Erreicht!' : `~${stats.predictedYears.toFixed(1)} Jahre`)
+    : 'Noch keine Daten';
+
+  document.getElementById('dailyAvg').textContent = Math.round(stats.dailyAvg).toLocaleString('de-DE');
+  document.getElementById('daysActive').textContent = stats.daysActiveTotal + ' Tage seit Start';
+
+  document.getElementById('currentStreak').textContent = stats.currentStreak;
+
+  document.getElementById('recordDay').textContent = stats.bestDay.toLocaleString('de-DE');
+  document.getElementById('recordDayDate').textContent = stats.bestDayDate ? fmtDateDe(stats.bestDayDate) : '—';
+
+  document.getElementById('recordSet').textContent = stats.bestSet.toLocaleString('de-DE');
+  document.getElementById('recordSetDate').textContent = stats.bestSetDate ? fmtDateDe(stats.bestSetDate) : '—';
+
+  document.getElementById('recordWeek').textContent = stats.bestWeek.toLocaleString('de-DE');
+  document.getElementById('recordWeekDate').textContent = stats.bestWeekEnd ? 'bis ' + fmtDateDe(stats.bestWeekEnd) : '—';
+
+  document.getElementById('recordMonth').textContent = stats.bestMonth.toLocaleString('de-DE');
+  document.getElementById('recordMonthDate').textContent = stats.bestMonthEnd ? 'bis ' + fmtDateDe(stats.bestMonthEnd) : '—';
+
+  document.getElementById('todayLabel').textContent = 'Heute · ' + fmtDateDe(todayISO());
+
+  renderEntries();
+  renderChart(stats);
+  renderBingo();
+  renderBadges(stats);
+}
+
+function renderBingo() {
+  const grid = document.getElementById('bingoGrid');
+  // Initialize bingo state fields if missing
+  if (state.bingoCompletedRounds == null) state.bingoCompletedRounds = 0;
+  if (state.bingoStartTs == null) state.bingoStartTs = 0;
+
+  // Hits in current round: entries with count 1-100 AND ts > bingoStartTs
+  const hits = new Set();
+  for (const e of state.entries) {
+    if (e.count >= 1 && e.count <= 100 && (e.ts || 0) > state.bingoStartTs) {
+      hits.add(e.count);
+    }
+  }
+
+  // Check if round is complete
+  if (hits.size === 100) {
+    state.bingoCompletedRounds++;
+    state.bingoStartTs = Date.now();
+    hits.clear();
+    save();
+    showBingoToast();
+  }
+
+  let html = '';
+  for (let n = 1; n <= 100; n++) {
+    const isHit = hits.has(n);
+    html += `<div class="bingo-cell ${isHit ? 'hit' : ''}">${n}</div>`;
+  }
+  grid.innerHTML = html;
+  document.getElementById('bingoCount').textContent = `${hits.size} / 100`;
+  document.getElementById('bingoBadgeCount').textContent = state.bingoCompletedRounds;
+  const bingoBadge = document.getElementById('bingoBadge');
+  if (state.bingoCompletedRounds > 0) bingoBadge.classList.add('has-bingo');
+  else bingoBadge.classList.remove('has-bingo');
+}
+
+function showBingoToast() {
+  const fake = {
+    icon: '🏆',
+    title: `Bingo Runde ${state.bingoCompletedRounds} voll!`,
+    desc: 'Alle Zahlen 1–100 getroffen. Neue Runde startet.'
+  };
+  showToast(fake, 'unlock');
+}
+
+// Collapse state: stores which jahr/monat/tag aufgeklappt sind
+let entriesCollapse = null; // wird beim ersten Render initialisiert
+
+function renderEntries() {
+  const c = document.getElementById('entriesList');
+  if (state.entries.length === 0) {
+    c.innerHTML = '<div class="empty">Noch keine Einträge.</div>';
+    return;
+  }
+  // group by date
+  const groups = {};
+  for (const e of state.entries) {
+    if (!groups[e.date]) groups[e.date] = [];
+    groups[e.date].push(e);
+  }
+  // group dates by year and month
+  const tree = {}; // {year: {month: {day: total, entries: []}}}
+  for (const d of Object.keys(groups)) {
+    const [y, m] = d.split('-');
+    if (!tree[y]) tree[y] = {};
+    if (!tree[y][m]) tree[y][m] = {};
+    tree[y][m][d] = {
+      entries: groups[d].sort((a,b)=>b.ts-a.ts),
+      total: groups[d].reduce((s,e)=>s+e.count, 0)
+    };
+  }
+
+  // initialize collapse state on first render: current year/month/day open
+  if (entriesCollapse === null) {
+    const today = todayISO();
+    const [ty, tm, td] = today.split('-');
+    entriesCollapse = {years: {}, months: {}, days: {}};
+    entriesCollapse.years[ty] = true;
+    entriesCollapse.months[`${ty}-${tm}`] = true;
+    entriesCollapse.days[today] = true;
+  }
+
+  const monthNames = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+  const years = Object.keys(tree).sort().reverse();
+
+  let html = '';
+  for (const y of years) {
+    const yearOpen = !!entriesCollapse.years[y];
+    const yearTotal = Object.values(tree[y]).reduce((sum, mObj) =>
+      sum + Object.values(mObj).reduce((s, d) => s + d.total, 0), 0);
+    html += `
+      <div class="tree-year ${yearOpen ? 'open' : ''}">
+        <div class="tree-header tree-header-year" data-toggle="year" data-key="${y}">
+          <span class="tree-arrow">${yearOpen ? '▼' : '▶'}</span>
+          <span class="tree-label">${y}</span>
+          <span class="tree-total">${yearTotal.toLocaleString('de-DE')}</span>
+        </div>
+        <div class="tree-children" style="display:${yearOpen?'block':'none'}">
+    `;
+    const months = Object.keys(tree[y]).sort().reverse();
+    for (const m of months) {
+      const monthKey = `${y}-${m}`;
+      const monthOpen = !!entriesCollapse.months[monthKey];
+      const monthTotal = Object.values(tree[y][m]).reduce((s, d) => s + d.total, 0);
+      html += `
+        <div class="tree-month ${monthOpen ? 'open' : ''}">
+          <div class="tree-header tree-header-month" data-toggle="month" data-key="${monthKey}">
+            <span class="tree-arrow">${monthOpen ? '▼' : '▶'}</span>
+            <span class="tree-label">${monthNames[parseInt(m)-1]}</span>
+            <span class="tree-total">${monthTotal.toLocaleString('de-DE')}</span>
+          </div>
+          <div class="tree-children" style="display:${monthOpen?'block':'none'}">
+      `;
+      const days = Object.keys(tree[y][m]).sort().reverse();
+      for (const d of days) {
+        const dayOpen = !!entriesCollapse.days[d];
+        const dayObj = tree[y][m][d];
+        html += `
+          <div class="tree-day ${dayOpen ? 'open' : ''}">
+            <div class="tree-header tree-header-day" data-toggle="day" data-key="${d}">
+              <span class="tree-arrow">${dayOpen ? '▼' : '▶'}</span>
+              <span class="tree-label">${fmtDateDe(d)}</span>
+              <span class="tree-total">${dayObj.total.toLocaleString('de-DE')}</span>
+            </div>
+            <div class="tree-children" style="display:${dayOpen?'block':'none'}">
+              ${dayObj.entries.map(e => `
+                <div class="entry-item">
+                  <span>+ ${e.count}</span>
+                  <div class="entry-actions">
+                    <button class="btn-small" onclick="editEntry('${e.id}')">edit</button>
+                    <button class="btn-small danger" onclick="deleteEntry('${e.id}')">×</button>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+      html += `</div></div>`;
+    }
+    html += `</div></div>`;
+  }
+  c.innerHTML = html;
+
+  // attach toggle handlers
+  c.querySelectorAll('[data-toggle]').forEach(header => {
+    header.addEventListener('click', () => {
+      const type = header.dataset.toggle;
+      const key = header.dataset.key;
+      const map = type === 'year' ? entriesCollapse.years
+                : type === 'month' ? entriesCollapse.months
+                : entriesCollapse.days;
+      map[key] = !map[key];
+      renderEntries();
+    });
+  });
+}
+
+function renderChart(stats) {
+  const svg = document.getElementById('chart30');
+  // ViewBox: 900x320
+  // Layout: left padding 56 (for Y axis labels), right 16, top 16, bottom 56 (for X axis labels)
+  const W = 900, H = 320;
+  const PL = 56, PR = 16, PT = 16, PB = 56;
+  const chartW = W - PL - PR;
+  const chartH = H - PT - PB;
+  svg.innerHTML = '';
+
+  // Detect rendered width to decide label density (mobile vs desktop)
+  const renderedWidth = svg.getBoundingClientRect().width || W;
+  const isMobile = renderedWidth < 500;
+
+  // last 30 days ending today
+  const days = [];
+  for (let i = 29; i >= 0; i--) {
+    const d = addDays(todayISO(), -i);
+    days.push({date: d, count: stats.byDate[d] || 0});
+  }
+  // Y axis: nice rounded max
+  const rawMax = Math.max(10, ...days.map(d => d.count));
+  function niceCeil(n) {
+    const pow = Math.pow(10, Math.floor(Math.log10(n)));
+    const norm = n / pow;
+    let nice;
+    if (norm <= 1) nice = 1;
+    else if (norm <= 2) nice = 2;
+    else if (norm <= 2.5) nice = 2.5;
+    else if (norm <= 5) nice = 5;
+    else nice = 10;
+    return nice * pow;
+  }
+  const yMax = niceCeil(rawMax);
+  const ticks = 5;
+
+  const barW = chartW / 30;
+
+  // gradient def
+  svg.insertAdjacentHTML('beforeend',
+    `<defs><linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffaa55"/>
+      <stop offset="100%" stop-color="#ff6633"/>
+    </linearGradient></defs>`);
+
+  // Y axis grid lines + labels
+  const yLabelSize = isMobile ? 14 : 11;
+  for (let i = 0; i <= ticks; i++) {
+    const yVal = yMax * (1 - i/ticks);
+    const y = PT + chartH * (i/ticks);
+    svg.insertAdjacentHTML('beforeend',
+      `<line x1="${PL}" y1="${y}" x2="${W-PR}" y2="${y}" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>`);
+    svg.insertAdjacentHTML('beforeend',
+      `<text x="${PL - 8}" y="${y + 4}" fill="#e0ddd6" font-family="JetBrains Mono" font-size="${yLabelSize}" text-anchor="end">${Math.round(yVal).toLocaleString('de-DE')}</text>`);
+  }
+
+  // X axis labels: every 5th day (desktop) oder jeder 7. (mobile) + Start/Ende
+  const xStep = isMobile ? 7 : 5;
+  const xLabelSize = isMobile ? 13 : 10;
+  days.forEach((d, i) => {
+    if (i === 0 || i === 29 || (i % xStep) === (xStep - 1)) {
+      const x = PL + i * barW + barW/2;
+      const [, m, dd] = d.date.split('-');
+      svg.insertAdjacentHTML('beforeend',
+        `<text x="${x}" y="${H - PB + 18}" fill="#e0ddd6" font-family="JetBrains Mono" font-size="${xLabelSize}" text-anchor="middle">${dd}.${m}</text>`);
+      svg.insertAdjacentHTML('beforeend',
+        `<line x1="${x}" y1="${PT + chartH}" x2="${x}" y2="${PT + chartH + 4}" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>`);
+    }
+  });
+
+  // X axis baseline
+  svg.insertAdjacentHTML('beforeend',
+    `<line x1="${PL}" y1="${PT + chartH}" x2="${W - PR}" y2="${PT + chartH}" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>`);
+  // Y axis baseline
+  svg.insertAdjacentHTML('beforeend',
+    `<line x1="${PL}" y1="${PT}" x2="${PL}" y2="${PT + chartH}" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>`);
+
+  // Bars
+  const valueLabelSize = isMobile ? 11 : 9;
+  days.forEach((d, i) => {
+    const x = PL + i * barW;
+    const h = d.count > 0 ? Math.max(1, (chartH * d.count) / yMax) : 0;
+    const y = PT + chartH - h;
+    const color = d.count === 0 ? '#48484f' : 'url(#barGrad)';
+    svg.insertAdjacentHTML('beforeend',
+      `<rect x="${x+1.5}" y="${y}" width="${barW-3}" height="${h}" fill="${color}" data-date="${d.date}" data-count="${d.count}" class="chart-bar"/>`);
+    // Wert über Balken nur auf Desktop (auf Mobile zu unlesbar)
+    if (!isMobile && d.count > 0 && barW > 16) {
+      svg.insertAdjacentHTML('beforeend',
+        `<text x="${x + barW/2}" y="${y - 4}" fill="#ffaa55" font-family="JetBrains Mono" font-size="${valueLabelSize}" text-anchor="middle" font-weight="700">${d.count}</text>`);
+    }
+  });
+
+  // Axis labels
+  const axisLabelSize = isMobile ? 12 : 10;
+  svg.insertAdjacentHTML('beforeend',
+    `<text x="${PL - 44}" y="${PT + chartH/2}" fill="#b8b4ad" font-family="JetBrains Mono" font-size="${axisLabelSize}" text-anchor="middle" transform="rotate(-90 ${PL - 44} ${PT + chartH/2})">Liegestütze</text>`);
+  svg.insertAdjacentHTML('beforeend',
+    `<text x="${PL + chartW/2}" y="${H - 8}" fill="#b8b4ad" font-family="JetBrains Mono" font-size="${axisLabelSize}" text-anchor="middle">Datum</text>`);
+
+  // hover (Desktop) & touch (Mobile)
+  function showTooltip(bar, e) {
+    const tip = document.getElementById('tooltip');
+    tip.textContent = `${fmtDateDe(bar.dataset.date)}: ${bar.dataset.count} LS`;
+    tip.style.display = 'block';
+    const cx = e.clientX || (e.touches && e.touches[0].clientX) || 0;
+    const cy = e.clientY || (e.touches && e.touches[0].clientY) || 0;
+    tip.style.left = (cx + 12) + 'px';
+    tip.style.top = (cy + 12) + 'px';
+  }
+  function hideTooltip() {
+    document.getElementById('tooltip').style.display = 'none';
+  }
+  svg.querySelectorAll('.chart-bar').forEach(bar => {
+    bar.addEventListener('mouseenter', e => showTooltip(bar, e));
+    bar.addEventListener('mousemove', e => showTooltip(bar, e));
+    bar.addEventListener('mouseleave', hideTooltip);
+    bar.addEventListener('touchstart', e => { showTooltip(bar, e); }, {passive: true});
+    bar.addEventListener('touchend', () => setTimeout(hideTooltip, 1500));
+  });
+}
+
+let currentHeatmapYear = TODAY.getFullYear();
+
+function renderHeatmap(stats) {
+  // year selector
+  const years = new Set([currentHeatmapYear]);
+  for (const d of state.entries.map(e=>e.date)) years.add(parseInt(d.slice(0,4)));
+  years.add(TODAY.getFullYear());
+  const yArr = [...years].sort();
+  const sel = document.getElementById('yearSelector');
+  sel.innerHTML = yArr.map(y => `<button class="year-btn ${y===currentHeatmapYear?'active':''}" data-y="${y}">${y}</button>`).join('');
+  sel.querySelectorAll('button').forEach(b => {
+    b.addEventListener('click', () => {
+      currentHeatmapYear = parseInt(b.dataset.y);
+      renderHeatmap(stats);
+    });
+  });
+
+  const c = document.getElementById('heatmap');
+  c.innerHTML = '';
+  const year = currentHeatmapYear;
+  const start = new Date(year, 0, 1);
+  const end = new Date(year, 11, 31);
+  // pad start to Monday (Mon=0 here)
+  const startWeekDay = (start.getDay() + 6) % 7;
+  const totalDays = Math.round((end - start)/86400000) + 1;
+  const cells = startWeekDay + totalDays;
+
+  for (let i = 0; i < cells; i++) {
+    if (i < startWeekDay) {
+      c.insertAdjacentHTML('beforeend', `<div class="heat-cell" style="visibility:hidden"></div>`);
+      continue;
+    }
+    const day = new Date(start);
+    day.setDate(day.getDate() + (i - startWeekDay));
+    const iso = fmtDate(day);
+    const count = stats.byDate[iso] || 0;
+    let cls = 'empty-day';
+    if (count >= 1000) cls = 'heat-5';
+    else if (count >= 500) cls = 'heat-4';
+    else if (count >= 200) cls = 'heat-3';
+    else if (count >= 50) cls = 'heat-2';
+    else if (count > 0) cls = 'heat-1';
+    c.insertAdjacentHTML('beforeend', `<div class="heat-cell ${cls}" data-d="${iso}" data-c="${count}"></div>`);
+  }
+  c.querySelectorAll('.heat-cell[data-d]').forEach(cell => {
+    cell.addEventListener('mouseenter', () => {
+      const tip = document.getElementById('tooltip');
+      tip.textContent = `${fmtDateDe(cell.dataset.d)}: ${cell.dataset.c} LS`;
+      tip.style.display = 'block';
+    });
+    cell.addEventListener('mousemove', e => {
+      const tip = document.getElementById('tooltip');
+      tip.style.left = (e.clientX + 12) + 'px';
+      tip.style.top = (e.clientY + 12) + 'px';
+    });
+    cell.addEventListener('mouseleave', () => {
+      document.getElementById('tooltip').style.display = 'none';
+    });
+  });
+}
+
+function renderBadges(stats) {
+  const container = document.getElementById('badgesContainer');
+  container.innerHTML = '';
+  const unlockedCount = Object.keys(state.badges).length;
+  document.getElementById('badgeCount').textContent = `${unlockedCount} / ${BADGES.length}`;
+
+  for (const cat of CATEGORIES) {
+    const badges = BADGES.filter(b => b.cat === cat.key);
+    const unlocked = badges.filter(b => state.badges[b.id]).length;
+    const html = `
+      <div class="badge-cat">
+        <div class="badge-cat-title">${cat.label} <span class="badge-cat-count">${unlocked} / ${badges.length}</span></div>
+        <div class="badges-grid">
+          ${badges.map(b => renderBadge(b, stats)).join('')}
+        </div>
+      </div>
+    `;
+    container.insertAdjacentHTML('beforeend', html);
+  }
+}
+
+function renderBadge(b, stats) {
+  const unlocked = !!state.badges[b.id];
+  const progress = b.getProgress(stats);
+  const pct = Math.min(100, (progress / b.target) * 100);
+  let progressText;
+  if (b.customProgressText) {
+    progressText = b.customProgressText(stats);
+  } else if (b.target === 1) {
+    progressText = unlocked ? 'Erreicht' : 'Offen';
+  } else {
+    progressText = `${progress.toLocaleString('de-DE')} / ${b.target.toLocaleString('de-DE')}`;
+  }
+  return `
+    <div class="badge ${unlocked ? 'unlocked' : ''}">
+      <div class="badge-header">
+        <div class="badge-icon">${b.icon}</div>
+        <div>
+          <div class="badge-title">${b.title}</div>
+        </div>
+      </div>
+      <div class="badge-desc">${b.desc}</div>
+      <div class="badge-progress-bar">
+        <div class="badge-progress-fill" style="width:${pct}%"></div>
+      </div>
+      <div class="badge-progress-text">
+        <span>${progressText}</span>
+        <span>${pct.toFixed(0)}%</span>
+      </div>
+      ${unlocked ? `<div class="badge-unlocked-date">✓ ${fmtDateDe(state.badges[b.id])}</div>` : ''}
+    </div>
+  `;
+}
+
+// ============================================================
+// ACTIONS
+// ============================================================
+function addEntry(count, date) {
+  if (!state.startDate) state.startDate = todayISO();  // start from today on first entry
+  const id = 'e_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+  state.entries.push({id, date, count, ts: Date.now()});
+  const stats = computeStats();
+  const {newlyUnlocked, revoked} = checkBadges(stats);
+  save();
+  newlyUnlocked.forEach(b => showToast(b, 'unlock'));
+  revoked.forEach(b => showToast(b, 'revoke'));
+  render();
+}
+
+function deleteEntry(id) {
+  state.entries = state.entries.filter(e => e.id !== id);
+  const stats = computeStats();
+  const {newlyUnlocked, revoked} = checkBadges(stats);
+  save();
+  newlyUnlocked.forEach(b => showToast(b, 'unlock'));
+  revoked.forEach(b => showToast(b, 'revoke'));
+  render();
+}
+
+function editEntry(id) {
+  const e = state.entries.find(x => x.id === id);
+  if (!e) return;
+  const newVal = prompt('Neuer Wert für Liegestütze:', e.count);
+  if (newVal === null) return;
+  const n = parseInt(newVal);
+  if (isNaN(n) || n < 1) { alert('Ungültiger Wert'); return; }
+  e.count = n;
+  const stats = computeStats();
+  const {newlyUnlocked, revoked} = checkBadges(stats);
+  save();
+  newlyUnlocked.forEach(b => showToast(b, 'unlock'));
+  revoked.forEach(b => showToast(b, 'revoke'));
+  render();
+}
+
+// ============================================================
+// INIT
+// ============================================================
+load();
+if (!state.startDate) state.startDate = todayISO();
+
+document.getElementById('inputDate').value = todayISO();
+document.getElementById('inputCount').focus();
+
+document.getElementById('addBtn').addEventListener('click', () => {
+  const c = parseInt(document.getElementById('inputCount').value);
+  const d = document.getElementById('inputDate').value;
+  if (isNaN(c) || c < 1) { alert('Bitte gültige Anzahl eingeben'); return; }
+  if (!d) { alert('Bitte Datum wählen'); return; }
+  addEntry(c, d);
+  document.getElementById('inputCount').value = '';
+  document.getElementById('inputCount').focus();
+});
+
+document.getElementById('inputCount').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('addBtn').click();
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  if (confirm('Wirklich ALLE Daten löschen? Das kann nicht rückgängig gemacht werden.')) {
+    localStorage.removeItem(STORAGE_KEY);
+    location.reload();
+  }
+});
+
+document.getElementById('exportBtn').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'pushup-tracker-' + todayISO() + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('importBtn').addEventListener('click', () => {
+  document.getElementById('importFile').click();
+});
+document.getElementById('importFile').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (!data.entries) throw new Error('Ungültiges Format');
+      if (confirm(`Import: ${data.entries.length} Einträge, ${Object.keys(data.badges||{}).length} Badges. Bestehende Daten werden überschrieben.`)) {
+        state = data;
+        if (!state.badges) state.badges = {};
+        save();
+        render();
+      }
+    } catch(err) {
+      alert('Fehler beim Import: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+});
+
+render();
+</script>
+</body>
+</html>
