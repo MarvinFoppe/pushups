@@ -1,3 +1,7 @@
+https://raw.githubusercontent.com/MarvinFoppe/pushups/refs/heads/main/index.html
+→ https://raw.githubusercontent.com/MarvinFoppe/pushups/refs/heads/main/index.html
+Content-Type: text/plain; charset=utf-8
+
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -1123,30 +1127,12 @@
 
 <div class="tooltip" id="tooltip"></div>
 
-<script type="module">
+<script>
 // ============================================================
-// FIREBASE SETUP
+// FIREBASE SYNC (REST API - kein SDK noetig)
 // ============================================================
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import {
-  getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
-import {
-  getFirestore, doc, getDoc, setDoc, onSnapshot, serverTimestamp
-} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyCPIB8YdzOxctNEjiz2EYtbm7sBRERjRec",
-  authDomain: "pushups-d72da.firebaseapp.com",
-  projectId: "pushups-d72da",
-  storageBucket: "pushups-d72da.firebasestorage.app",
-  messagingSenderId: "735316000865",
-  appId: "1:735316000865:web:877e5f9518adbfceb7ea20"
-};
-const fbApp = initializeApp(firebaseConfig);
-const fbAuth = getAuth(fbApp);
-const fbDb = getFirestore(fbApp);
-const googleProvider = new GoogleAuthProvider();
+let firebaseUrl = localStorage.getItem('firebase-url') || '';
+let syncCode = localStorage.getItem('sync-code') || '';
 
 
 // ============================================================
@@ -1204,16 +1190,16 @@ const BADGES = [
     desc: `${n} Tage in Folge mit mind. einem Eintrag`,
     target: n,
     getProgress: s => Math.min(n, s.bestStreak),
-    getCurrent: s => Math.min(n, s.currentStreak)
+    getDisplayProgress: s => Math.min(n, s.currentStreak)
   })),
 
   // === KONSISTENZ (6) ===
-  {id:'cons_7_50',cat:'cons',icon:'⚡',title:'Solide Woche',desc:'7 Tage in Folge mit mind. 50 LS',target:7,getProgress:s=>Math.min(7,s.bestConsistency[50]||0),getCurrent:s=>Math.min(7,s.currentConsistency[50]||0)},
-  {id:'cons_7_100',cat:'cons',icon:'⚡',title:'Starke Woche',desc:'7 Tage in Folge mit mind. 100 LS',target:7,getProgress:s=>Math.min(7,s.bestConsistency[100]||0),getCurrent:s=>Math.min(7,s.currentConsistency[100]||0)},
-  {id:'cons_14_50',cat:'cons',icon:'⚡',title:'Zwei Wochen Disziplin',desc:'14 Tage in Folge mit mind. 50 LS',target:14,getProgress:s=>Math.min(14,s.bestConsistency[50]||0),getCurrent:s=>Math.min(14,s.currentConsistency[50]||0)},
-  {id:'cons_30_50',cat:'cons',icon:'⚡',title:'Monat der Wahrheit',desc:'30 Tage in Folge mit mind. 50 LS',target:30,getProgress:s=>Math.min(30,s.bestConsistency[50]||0),getCurrent:s=>Math.min(30,s.currentConsistency[50]||0)},
-  {id:'cons_30_100',cat:'cons',icon:'⚡',title:'Eiserner Monat',desc:'30 Tage in Folge mit mind. 100 LS',target:30,getProgress:s=>Math.min(30,s.bestConsistency[100]||0),getCurrent:s=>Math.min(30,s.currentConsistency[100]||0)},
-  {id:'cons_100_100',cat:'cons',icon:'⚡',title:'Maschine',desc:'100 Tage in Folge mit mind. 100 LS',target:100,getProgress:s=>Math.min(100,s.bestConsistency[100]||0),getCurrent:s=>Math.min(100,s.currentConsistency[100]||0)},
+  {id:'cons_7_50',cat:'cons',icon:'⚡',title:'Solide Woche',desc:'7 Tage in Folge mit mind. 50 LS',target:7,getProgress:s=>Math.min(7,s.bestConsistency[50]||0),getDisplayProgress:s=>Math.min(7,s.currentConsistency[50]||0)},
+  {id:'cons_7_100',cat:'cons',icon:'⚡',title:'Starke Woche',desc:'7 Tage in Folge mit mind. 100 LS',target:7,getProgress:s=>Math.min(7,s.bestConsistency[100]||0),getDisplayProgress:s=>Math.min(7,s.currentConsistency[100]||0)},
+  {id:'cons_14_50',cat:'cons',icon:'⚡',title:'Zwei Wochen Disziplin',desc:'14 Tage in Folge mit mind. 50 LS',target:14,getProgress:s=>Math.min(14,s.bestConsistency[50]||0),getDisplayProgress:s=>Math.min(14,s.currentConsistency[50]||0)},
+  {id:'cons_30_50',cat:'cons',icon:'⚡',title:'Monat der Wahrheit',desc:'30 Tage in Folge mit mind. 50 LS',target:30,getProgress:s=>Math.min(30,s.bestConsistency[50]||0),getDisplayProgress:s=>Math.min(30,s.currentConsistency[50]||0)},
+  {id:'cons_30_100',cat:'cons',icon:'⚡',title:'Eiserner Monat',desc:'30 Tage in Folge mit mind. 100 LS',target:30,getProgress:s=>Math.min(30,s.bestConsistency[100]||0),getDisplayProgress:s=>Math.min(30,s.currentConsistency[100]||0)},
+  {id:'cons_100_100',cat:'cons',icon:'⚡',title:'Maschine',desc:'100 Tage in Folge mit mind. 100 LS',target:100,getProgress:s=>Math.min(100,s.bestConsistency[100]||0),getDisplayProgress:s=>Math.min(100,s.currentConsistency[100]||0)},
 
   // === SPECIAL / FUN (10) ===
   {id:'sp_first',cat:'special',icon:'🚀',title:'Erster Schritt',desc:'Allererster Eintrag',target:1,getProgress:s=>s.entries>0?1:0},
@@ -1386,16 +1372,12 @@ function computeStats() {
     }
     return best;
   }
-  // Current consistency: count back from today/yesterday, only days with >= threshold
+  // Current consistency streak: count back from today (like currentStreak but with threshold)
   function currentConsistencyFor(threshold) {
     let cur = 0;
     let cursor = todayISO();
-    // Allow starting from yesterday if today has no qualifying entry
-    if ((byDate[cursor] || 0) < threshold) cursor = addDays(cursor, -1);
-    while ((byDate[cursor] || 0) >= threshold) {
-      cur++;
-      cursor = addDays(cursor, -1);
-    }
+    if (!(byDate[cursor] >= threshold)) cursor = addDays(cursor, -1);
+    while (byDate[cursor] >= threshold) { cur++; cursor = addDays(cursor, -1); }
     return cur;
   }
   const bestConsistency = {
@@ -1473,8 +1455,7 @@ function computeStats() {
     bestWeek, bestWeekEnd,
     bestMonth, bestMonthEnd,
     bestStreak, currentStreak,
-    bestConsistency,
-    currentConsistency,
+    bestConsistency, currentConsistency,
     bestWindow,
     uniqueCalendarDays,
     predictedFinish, predictedYears,
@@ -1940,31 +1921,17 @@ function renderBadges(stats) {
 
 function renderBadge(b, stats) {
   const unlocked = !!state.badges[b.id];
-  // Wenn das Badge eine getCurrent-Funktion hat:
-  // - unlocked: zeig vollen Balken + "Erreicht"
-  // - locked: zeig aktuelle Serie
-  // Sonst: alter Mechanismus (getProgress = historischer Bestwert)
-  let displayValue, pct, progressText;
-  if (b.getCurrent) {
-    if (unlocked) {
-      displayValue = b.target;
-      pct = 100;
-      progressText = 'Erreicht';
-    } else {
-      displayValue = b.getCurrent(stats);
-      pct = Math.min(100, (displayValue / b.target) * 100);
-      progressText = `${displayValue.toLocaleString('de-DE')} / ${b.target.toLocaleString('de-DE')}`;
-    }
+  const progress = b.getProgress(stats);
+  // For streaks/consistency: show current (live) progress in the bar, not all-time best
+  const displayProgress = b.getDisplayProgress ? b.getDisplayProgress(stats) : progress;
+  const pct = Math.min(100, (displayProgress / b.target) * 100);
+  let progressText;
+  if (b.customProgressText) {
+    progressText = b.customProgressText(stats);
+  } else if (b.target === 1) {
+    progressText = unlocked ? 'Erreicht' : 'Offen';
   } else {
-    displayValue = b.getProgress(stats);
-    pct = Math.min(100, (displayValue / b.target) * 100);
-    if (b.customProgressText) {
-      progressText = b.customProgressText(stats);
-    } else if (b.target === 1) {
-      progressText = unlocked ? 'Erreicht' : 'Offen';
-    } else {
-      progressText = `${displayValue.toLocaleString('de-DE')} / ${b.target.toLocaleString('de-DE')}`;
-    }
+    progressText = `${displayProgress.toLocaleString('de-DE')} / ${b.target.toLocaleString('de-DE')}`;
   }
   return `
     <div class="badge ${unlocked ? 'unlocked' : ''}">
@@ -2099,10 +2066,7 @@ render();
 // ============================================================
 // FIREBASE AUTH & SYNC
 // ============================================================
-let currentUser = null;
-let cloudUnsubscribe = null;
 let pushTimeout = null;
-let suppressNextSnapshot = false; // verhindert Sync-Loop nach eigenem Push
 
 function setSyncStatus(status, text) {
   const dot = document.getElementById('syncDot');
@@ -2111,19 +2075,21 @@ function setSyncStatus(status, text) {
   txt.textContent = text;
 }
 
-function userDocRef(uid) {
-  return doc(fbDb, 'users', uid);
+function generateSyncCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
 }
 
 async function pushToCloud() {
-  if (!currentUser) return;
+  if (!firebaseUrl || !syncCode) return;
   try {
     setSyncStatus('syncing', 'Sync...');
-    suppressNextSnapshot = true;
-    await setDoc(userDocRef(currentUser.uid), {
-      state: state,
-      updatedAt: state.updatedAt || Date.now(),
-      lastDevice: navigator.userAgent.slice(0, 80)
+    await fetch(`${firebaseUrl}/tracker/${syncCode}/pushups.json`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(state)
     });
     setSyncStatus('online', 'Synced');
   } catch (e) {
@@ -2133,37 +2099,36 @@ async function pushToCloud() {
 }
 
 function scheduleCloudPush() {
-  if (!currentUser) return;
+  if (!firebaseUrl || !syncCode) return;
   clearTimeout(pushTimeout);
   pushTimeout = setTimeout(pushToCloud, 800);
 }
 
 async function pullFromCloudAndMerge() {
-  if (!currentUser) return;
+  if (!firebaseUrl || !syncCode) return;
   try {
     setSyncStatus('syncing', 'Lade...');
-    const snap = await getDoc(userDocRef(currentUser.uid));
-    if (!snap.exists()) {
-      // Cloud leer → lokalen State hochpushen
+    const res = await fetch(`${firebaseUrl}/tracker/${syncCode}/pushups.json`);
+    const cloudState = await res.json();
+
+    if (!cloudState) {
       console.log('Cloud leer, pushe lokalen State');
       await pushToCloud();
       return;
     }
-    const cloud = snap.data();
-    const cloudState = cloud.state;
-    const cloudUpdatedAt = cloud.updatedAt || 0;
+
+    const cloudUpdatedAt = cloudState.updatedAt || 0;
     const localUpdatedAt = state.updatedAt || 0;
 
     if (cloudUpdatedAt > localUpdatedAt) {
-      console.log('Cloud neuer, übernehme Cloud-State');
+      console.log('Cloud neuer, uebernehme Cloud-State');
       state = cloudState;
-      // ensure required fields
       if (!state.entries) state.entries = [];
       if (!state.badges) state.badges = {};
       if (state.bingoCompletedRounds == null) state.bingoCompletedRounds = 0;
       if (state.bingoStartTs == null) state.bingoStartTs = 0;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      entriesCollapse = null; // collapse-state neu initialisieren
+      entriesCollapse = null;
       render();
       setSyncStatus('online', 'Synced');
     } else if (localUpdatedAt > cloudUpdatedAt) {
@@ -2178,83 +2143,44 @@ async function pullFromCloudAndMerge() {
   }
 }
 
-function startRealtimeListener() {
-  if (!currentUser) return;
-  if (cloudUnsubscribe) cloudUnsubscribe();
-  cloudUnsubscribe = onSnapshot(userDocRef(currentUser.uid), (snap) => {
-    if (suppressNextSnapshot) {
-      // dieser Snapshot stammt von unserem eigenen Push → ignorieren
-      suppressNextSnapshot = false;
-      return;
-    }
-    if (!snap.exists()) return;
-    const cloud = snap.data();
-    const cloudUpdatedAt = cloud.updatedAt || 0;
-    const localUpdatedAt = state.updatedAt || 0;
-    if (cloudUpdatedAt > localUpdatedAt) {
-      console.log('Realtime update aus Cloud');
-      state = cloud.state;
-      if (!state.entries) state.entries = [];
-      if (!state.badges) state.badges = {};
-      if (state.bingoCompletedRounds == null) state.bingoCompletedRounds = 0;
-      if (state.bingoStartTs == null) state.bingoStartTs = 0;
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      entriesCollapse = null;
-      render();
-      setSyncStatus('online', 'Synced');
-    }
-  }, (err) => {
-    console.error('Realtime listener error', err);
-    setSyncStatus('error', 'Verbindungsfehler');
-  });
+let syncInterval = null;
+function startSyncLoop() {
+  if (syncInterval) return;
+  syncInterval = setInterval(async () => { await pullFromCloudAndMerge(); }, 30000);
 }
 
-function stopRealtimeListener() {
-  if (cloudUnsubscribe) { cloudUnsubscribe(); cloudUnsubscribe = null; }
+function showSyncSetup() {
+  const url = prompt('Firebase Realtime Database URL eingeben:\n(z.B. https://filme-5b578-default-rtdb.europe-west1.firebasedatabase.app)', firebaseUrl);
+  if (!url) return;
+  const code = prompt('Sync-Code eingeben (leer lassen = neuer Code):\nNutze den gleichen Code wie beim Disney/MCU Tracker!', syncCode) || generateSyncCode();
+  firebaseUrl = url.replace(/\/+$/, '');
+  syncCode = code.toUpperCase();
+  localStorage.setItem('firebase-url', firebaseUrl);
+  localStorage.setItem('sync-code', syncCode);
+  updateSyncUI();
+  pullFromCloudAndMerge().then(() => startSyncLoop());
 }
 
-function updateAuthUI() {
+function updateSyncUI() {
   const btn = document.getElementById('authBtn');
-  if (currentUser) {
-    const photo = currentUser.photoURL;
-    const name = currentUser.displayName || currentUser.email || 'User';
-    btn.innerHTML = (photo ? `<img src="${photo}" alt="">` : '') +
-                    `<span>${name.split(' ')[0]}</span><span style="opacity:0.5;margin-left:6px;">×</span>`;
-    btn.title = 'Abmelden (' + name + ')';
+  if (firebaseUrl && syncCode) {
+    btn.innerHTML = '<span>Sync: ' + syncCode + '</span>';
+    btn.title = 'Sync-Code: ' + syncCode + ' (klicken fuer Einstellungen)';
+    setSyncStatus('online', 'Verbunden');
   } else {
-    btn.innerHTML = '<span>Anmelden</span>';
-    btn.title = 'Mit Google anmelden für Geräte-Sync';
+    btn.innerHTML = '<span>Sync einrichten</span>';
+    btn.title = 'Klicken um Geraete-Sync einzurichten';
     setSyncStatus('', 'Offline');
   }
 }
 
-document.getElementById('authBtn').addEventListener('click', async () => {
-  if (currentUser) {
-    if (confirm('Abmelden? Sync wird deaktiviert. Lokale Daten bleiben auf diesem Gerät.')) {
-      await signOut(fbAuth);
-    }
-  } else {
-    try {
-      await signInWithPopup(fbAuth, googleProvider);
-    } catch (e) {
-      console.error('Login fehlgeschlagen', e);
-      if (e.code !== 'auth/popup-closed-by-user') {
-        alert('Login fehlgeschlagen: ' + (e.message || e.code));
-      }
-    }
-  }
-});
+document.getElementById('authBtn').addEventListener('click', showSyncSetup);
 
-onAuthStateChanged(fbAuth, async (user) => {
-  currentUser = user;
-  updateAuthUI();
-  if (user) {
-    await pullFromCloudAndMerge();
-    startRealtimeListener();
-  } else {
-    stopRealtimeListener();
-  }
-});
+// INIT SYNC
+updateSyncUI();
+if (firebaseUrl && syncCode) {
+  pullFromCloudAndMerge().then(() => startSyncLoop());
+}
 </script>
 </body>
 </html>
