@@ -1195,13 +1195,14 @@ const TRACKERS = {
     key: 'swimming',
     storageKey: 'swimming_tracker_v1',
     syncKey: 'swimming',
-    unit: 'Einheiten',
-    unitShort: 'EH',
-    inputLabel: 'Einheiten',
+    unit: 'Kilometer',
+    unitShort: 'km',
+    inputLabel: 'Meter',
+    inputMultiplier: 0.001,
     dailyBaseline: 0.2740,
     target: 1000,
-    targetDisplay: '1.000',
-    title: 'MISSION <span>1.000</span>',
+    targetDisplay: '1.000 KM',
+    title: 'MISSION <span>1.000 KM</span>',
     offset: 0,
     step: '1',
     accent: '#33bbdd',
@@ -1441,29 +1442,45 @@ BADGES_BY_TRACKER.cycling = [
   ])
 ];
 
-// --- SWIMMING ---
+// --- SWIMMING (Eingabe in Metern, intern gespeichert in km) ---
 BADGES_BY_TRACKER.swimming = [
-  ...mkTotal([1,5,10,25,50,100,250,500,750,1000], 'Einheiten', 0),
-  ...mkDay([1,2,3,5,7,10], 'Einheiten'),
-  ...mkSet([1,2,3,5], 'Einheiten'),
+  // Gesamt: km-Meilensteine
+  ...mkTotal([1,5,10,25,50,100,250,500,750,1000], 'Kilometer', 0),
+  // Tagesleistung: km an einem Tag (0.5km=500m, 1km=1000m, etc.)
+  ...[0.5,1,1.5,2,3,5,7.5,10].map(n => ({
+    id:'day_'+n, cat:'day', icon:'💪',
+    title: n < 1 ? `${Math.round(n*1000)} m an einem Tag` : `${n} km an einem Tag`,
+    desc: n < 1 ? `${Math.round(n*1000)} Meter an einem einzigen Tag geschwommen` : `${n} km an einem einzigen Tag geschwommen`,
+    target: n,
+    getProgress: s => Math.min(n, s.bestDay)
+  })),
+  // Bestes Set: km in einer Einheit
+  ...[0.1,0.2,0.5,1,1.5,2,3,5].map(n => ({
+    id:'set_'+n, cat:'set', icon:'🎯',
+    title: n < 1 ? `${Math.round(n*1000)} m am Stück` : `${n} km am Stück`,
+    desc: n < 1 ? `${Math.round(n*1000)} Meter in einer einzigen Einheit` : `${n} km in einer einzigen Einheit`,
+    target: n,
+    getProgress: s => Math.min(n, s.bestSet)
+  })),
   ...mkStreak([2,3,5,7,14,21,30]),
   ...mkCons([
-    {days:3,min:1,title:'3-Tage-Disziplin',desc:'3 Tage in Folge mit mind. 1 EH'},
-    {days:5,min:1,title:'5-Tage-Disziplin',desc:'5 Tage in Folge mit mind. 1 EH'},
-    {days:7,min:1,title:'Solide Woche',desc:'7 Tage in Folge mit mind. 1 EH'},
-    {days:14,min:1,title:'Zwei Wochen Disziplin',desc:'14 Tage in Folge mit mind. 1 EH'},
-    {days:30,min:1,title:'Eiserner Monat',desc:'30 Tage in Folge mit mind. 1 EH'}
+    {days:3,min:0.1,title:'3-Tage-Disziplin',desc:'3 Tage in Folge mit mind. 100 m'},
+    {days:5,min:0.1,title:'5-Tage-Disziplin',desc:'5 Tage in Folge mit mind. 100 m'},
+    {days:7,min:0.1,title:'Solide Woche',desc:'7 Tage in Folge mit mind. 100 m'},
+    {days:7,min:0.5,title:'Starke Woche',desc:'7 Tage in Folge mit mind. 500 m'},
+    {days:14,min:0.1,title:'Zwei Wochen Disziplin',desc:'14 Tage in Folge mit mind. 100 m'},
+    {days:30,min:0.1,title:'Eiserner Monat',desc:'30 Tage in Folge mit mind. 100 m'}
   ]),
   ...mkSpecial([
     {id:'sp_first',icon:'🚀',title:'Erster Schritt',desc:'Allererster Eintrag',target:1,getProgress:s=>s.entries>0?1:0},
-    {id:'sp_10_30',icon:'📅',title:'Monatsziel',desc:'10+ EH in 30 Tagen',target:10,getProgress:s=>Math.min(10,s.bestWindow[30]||0)},
-    {id:'sp_30_30',icon:'📅',title:'Großer Monat',desc:'30+ EH in 30 Tagen',target:30,getProgress:s=>Math.min(30,s.bestWindow[30]||0)},
-    {id:'sp_25_90',icon:'🗓️',title:'Quartal',desc:'25+ EH in 90 Tagen',target:25,getProgress:s=>Math.min(25,s.bestWindow[90]||0)},
-    {id:'sp_100_365',icon:'🏅',title:'Jahresleistung',desc:'100+ EH in 365 Tagen',target:100,getProgress:s=>Math.min(100,s.bestWindow[365]||0)},
-    {id:'sp_5_7',icon:'🏃',title:'Solider Lauf',desc:'5+ EH in 7 Tagen',target:5,getProgress:s=>Math.min(5,s.bestWindow[7]||0)},
+    {id:'sp_10_30',icon:'📅',title:'Monatsziel',desc:'10+ km in 30 Tagen',target:10,getProgress:s=>Math.min(10,s.bestWindow[30]||0)},
+    {id:'sp_30_30',icon:'📅',title:'Großer Monat',desc:'30+ km in 30 Tagen',target:30,getProgress:s=>Math.min(30,s.bestWindow[30]||0)},
+    {id:'sp_25_90',icon:'🗓️',title:'Quartal',desc:'75+ km in 90 Tagen',target:75,getProgress:s=>Math.min(75,s.bestWindow[90]||0)},
+    {id:'sp_100_365',icon:'🏅',title:'Jahresleistung',desc:'100+ km in 365 Tagen',target:100,getProgress:s=>Math.min(100,s.bestWindow[365]||0)},
+    {id:'sp_5_7',icon:'🏃',title:'Solider Lauf',desc:'5+ km in 7 Tagen',target:5,getProgress:s=>Math.min(5,s.bestWindow[7]||0)},
     {id:'sp_calendar',icon:'🗓️',title:'Kalender-Komplettist',desc:'An jedem der 365 Kalendertage mind. 1x geschwommen',target:365,getProgress:s=>Math.min(365,s.uniqueCalendarDays)},
-    {id:'sp_track',icon:'🎯',title:'On Track',desc:'Jahres-Ø von 100+ EH',target:100,getProgress:s=>Math.min(100,Math.round(s.dailyAvg*365)),customProgressText:s=>`${Math.round(s.dailyAvg*365)} / 100 EH Jahres-Ø`},
-    {id:'sp_endgame',icon:'🏁',title:'Endspurt',desc:'Letzte 100 Einheiten bis zum Ziel',target:100,getProgress:s=>Math.max(0,Math.min(100,s.total-900))}
+    {id:'sp_track',icon:'🎯',title:'On Track',desc:'Jahres-Ø von 100+ km',target:100,getProgress:s=>Math.min(100,Math.round(s.dailyAvg*365)),customProgressText:s=>`${Math.round(s.dailyAvg*365)} / 100 km Jahres-Ø`},
+    {id:'sp_endgame',icon:'🏁',title:'Endspurt',desc:'Letzte 100 km bis zum Ziel',target:100,getProgress:s=>Math.max(0,Math.min(100,s.total-900))}
   ])
 ];
 
@@ -2016,8 +2033,10 @@ function render() {
   const state = getState();
   const displayTotal = stats.total + config.offset;
 
-  // counter
-  document.getElementById('counterCurrent').textContent = displayTotal.toLocaleString('de-DE');
+  // counter — use decimal display for swimming (km) and cycling
+  const useDec = config.inputMultiplier || config.step === '0.1';
+  const fmtHero = (v) => useDec ? v.toLocaleString('de-DE', {minimumFractionDigits:1, maximumFractionDigits:1}) : v.toLocaleString('de-DE');
+  document.getElementById('counterCurrent').textContent = fmtHero(displayTotal);
   const pct = (displayTotal / config.target) * 100;
   document.getElementById('counterPercent').textContent = pct.toFixed(3) + '%';
   document.getElementById('progressFill').style.width = Math.min(100, pct) + '%';
@@ -2030,20 +2049,21 @@ function render() {
 
   // Daily Avg or Jahres-Ø for swimming
   if (config.isSwimming) {
-    document.getElementById('dailyAvg').textContent = Math.round(stats.dailyAvg * 365).toLocaleString('de-DE');
+    const yearlyKm = stats.dailyAvg * 365;
+    document.getElementById('dailyAvg').textContent = yearlyKm.toLocaleString('de-DE', {minimumFractionDigits:1, maximumFractionDigits:1}) + ' km';
   } else {
     document.getElementById('dailyAvg').textContent = Math.round(stats.dailyAvg).toLocaleString('de-DE');
   }
   document.getElementById('daysActive').textContent = stats.daysActiveTotal + ' Tage seit Start';
 
   document.getElementById('currentStreak').textContent = stats.currentStreak;
-  document.getElementById('recordDay').textContent = stats.bestDay.toLocaleString('de-DE');
+  document.getElementById('recordDay').textContent = fmtHero(stats.bestDay);
   document.getElementById('recordDayDate').textContent = stats.bestDayDate ? fmtDateDe(stats.bestDayDate) : '—';
-  document.getElementById('recordSet').textContent = stats.bestSet.toLocaleString('de-DE');
+  document.getElementById('recordSet').textContent = fmtHero(stats.bestSet);
   document.getElementById('recordSetDate').textContent = stats.bestSetDate ? fmtDateDe(stats.bestSetDate) : '—';
-  document.getElementById('recordWeek').textContent = stats.bestWeek.toLocaleString('de-DE');
+  document.getElementById('recordWeek').textContent = fmtHero(stats.bestWeek);
   document.getElementById('recordWeekDate').textContent = stats.bestWeekEnd ? 'bis ' + fmtDateDe(stats.bestWeekEnd) : '—';
-  document.getElementById('recordMonth').textContent = stats.bestMonth.toLocaleString('de-DE');
+  document.getElementById('recordMonth').textContent = fmtHero(stats.bestMonth);
   document.getElementById('recordMonthDate').textContent = stats.bestMonthEnd ? 'bis ' + fmtDateDe(stats.bestMonthEnd) : '—';
 
   document.getElementById('todayLabel').textContent = 'Heute · ' + fmtDateDe(todayISO());
@@ -2176,7 +2196,14 @@ function renderEntries() {
   const monthNames = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
   const years = Object.keys(tree).sort().reverse();
 
+  const mult = config.inputMultiplier || 1;
   const fmtVal = (v) => {
+    if (mult !== 1) return v.toLocaleString('de-DE', {minimumFractionDigits:1, maximumFractionDigits:1}) + ' km';
+    if (config.step === '0.1') return v.toLocaleString('de-DE', {minimumFractionDigits:0, maximumFractionDigits:1});
+    return v.toLocaleString('de-DE');
+  };
+  const fmtEntry = (v) => {
+    if (mult !== 1) return Math.round(v / mult).toLocaleString('de-DE') + ' m';
     if (config.step === '0.1') return v.toLocaleString('de-DE', {minimumFractionDigits:0, maximumFractionDigits:1});
     return v.toLocaleString('de-DE');
   };
@@ -2223,7 +2250,7 @@ function renderEntries() {
             <div class="tree-children" style="display:${dayOpen?'block':'none'}">
               ${dayObj.entries.map(e => `
                 <div class="entry-item">
-                  <span>+ ${config.step === '0.1' ? e.count.toLocaleString('de-DE',{minimumFractionDigits:0,maximumFractionDigits:1}) : e.count.toLocaleString('de-DE')}</span>
+                  <span>+ ${fmtEntry(e.count)}</span>
                   <div class="entry-actions">
                     <button class="btn-small" onclick="editEntry('${e.id}')">edit</button>
                     <button class="btn-small danger" onclick="deleteEntry('${e.id}')">x</button>
@@ -2301,7 +2328,7 @@ function renderChart(stats) {
     svg.insertAdjacentHTML('beforeend',
       `<line x1="${PL}" y1="${y}" x2="${W-PR}" y2="${y}" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>`);
     svg.insertAdjacentHTML('beforeend',
-      `<text x="${PL - 8}" y="${y + 4}" fill="#e0ddd6" font-family="JetBrains Mono" font-size="${yLabelSize}" text-anchor="end">${Math.round(yVal).toLocaleString('de-DE')}</text>`);
+      `<text x="${PL - 8}" y="${y + 4}" fill="#e0ddd6" font-family="JetBrains Mono" font-size="${yLabelSize}" text-anchor="end">${yMax < 10 ? yVal.toLocaleString('de-DE',{minimumFractionDigits:1,maximumFractionDigits:1}) : Math.round(yVal).toLocaleString('de-DE')}</text>`);
   }
 
   // X axis
@@ -2348,8 +2375,15 @@ function renderChart(stats) {
   // hover / touch
   function showTip(bar, e) {
     const tip = document.getElementById('tooltip');
-    const val = config.step==='0.1' ? parseFloat(bar.dataset.count).toFixed(1) : bar.dataset.count;
-    tip.textContent = `${fmtDateDe(bar.dataset.date)}: ${val} ${config.unitShort}`;
+    let val;
+    if (config.inputMultiplier) {
+      val = Math.round(parseFloat(bar.dataset.count) / config.inputMultiplier).toLocaleString('de-DE') + ' m';
+    } else if (config.step==='0.1') {
+      val = parseFloat(bar.dataset.count).toFixed(1) + ' ' + config.unitShort;
+    } else {
+      val = parseInt(bar.dataset.count).toLocaleString('de-DE') + ' ' + config.unitShort;
+    }
+    tip.textContent = `${fmtDateDe(bar.dataset.date)}: ${val}`;
     tip.style.display = 'block';
     const cx = e.clientX || (e.touches && e.touches[0].clientX) || 0;
     const cy = e.clientY || (e.touches && e.touches[0].clientY) || 0;
@@ -2430,9 +2464,11 @@ function renderBadge(b, stats) {
 // ============================================================
 function addEntry(count, date) {
   const state = getState();
+  const config = getConfig();
   if (!state.startDate) state.startDate = todayISO();
   const id = 'e_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
-  state.entries.push({id, date, count, ts: Date.now()});
+  const storedCount = count * (config.inputMultiplier || 1);
+  state.entries.push({id, date, count: storedCount, ts: Date.now()});
   const stats = computeStats();
   const {newlyUnlocked, revoked} = checkBadges(stats);
   saveState(activeTracker);
@@ -2458,11 +2494,14 @@ function editEntry(id) {
   const config = getConfig();
   const e = state.entries.find(x => x.id === id);
   if (!e) return;
-  const newVal = prompt('Neuer Wert für ' + config.unit + ':', e.count);
+  const mult = config.inputMultiplier || 1;
+  const displayVal = mult !== 1 ? Math.round(e.count / mult) : e.count;
+  const promptUnit = config.inputMultiplier ? config.inputLabel : config.unit;
+  const newVal = prompt('Neuer Wert in ' + promptUnit + ':', displayVal);
   if (newVal === null) return;
-  const n = config.step === '0.1' ? parseFloat(newVal) : parseInt(newVal);
+  const n = (config.step === '0.1' || config.inputMultiplier) ? parseFloat(newVal) : parseInt(newVal);
   if (isNaN(n) || n <= 0) { alert('Ungültiger Wert'); return; }
-  e.count = n;
+  e.count = n * mult;
   const stats = computeStats();
   const {newlyUnlocked, revoked} = checkBadges(stats);
   saveState(activeTracker);
@@ -2515,7 +2554,7 @@ document.getElementById('addBtn').addEventListener('click', () => {
     }
   } else {
     const raw = document.getElementById('inputCount').value;
-    const c = cfg.step === '0.1' ? parseFloat(raw) : parseInt(raw);
+    const c = (cfg.step === '0.1' || cfg.inputMultiplier) ? parseFloat(raw) : parseInt(raw);
     const d = document.getElementById('inputDate').value;
     if (isNaN(c) || c <= 0) { alert('Bitte gültige Anzahl eingeben'); return; }
     if (!d) { alert('Bitte Datum wählen'); return; }
