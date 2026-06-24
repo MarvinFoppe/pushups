@@ -1635,6 +1635,11 @@ async function pullFromCloudAll() {
   try {
     setSyncStatus('syncing', 'Lade...');
     const res = await fetch(`${firebaseUrl}/tracker/${syncCode}.json`);
+    const ct = res.headers.get('content-type') || '';
+    if (!ct.includes('json')) {
+      setSyncStatus('error', 'Server antwortet nicht (kein JSON)');
+      return;
+    }
     const cloudAll = await res.json();
     if (!cloudAll) {
       // Cloud is empty, push all local states
