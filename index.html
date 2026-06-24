@@ -1620,7 +1620,7 @@ async function pushToCloud(key) {
     setSyncStatus('online', 'Synced');
   } catch (e) {
     console.error('Cloud push failed for', key, e);
-    setSyncStatus('error', 'Sync-Fehler');
+    setSyncStatus('error', key + ': ' + (e.message || 'Push-Fehler').substring(0, 25));
   }
 }
 
@@ -1736,7 +1736,7 @@ async function pullFromCloudAll() {
     setSyncStatus('online', 'Synced');
   } catch (e) {
     console.error('Cloud pull failed', e);
-    setSyncStatus('error', 'Sync-Fehler');
+    setSyncStatus('error', 'Sync: ' + (e.message || 'Fehler').substring(0, 30));
   }
 }
 
