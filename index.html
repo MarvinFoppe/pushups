@@ -1685,6 +1685,24 @@ async function pullFromCloudAll() {
         continue;
       }
 
+      // Fresh device: no local data — just take cloud state directly
+      if (localEntries.length === 0 && cloudEntries.length > 0) {
+        states[key] = Object.assign({}, cloudState);
+        if (!states[key].entries) states[key].entries = [];
+        if (!states[key].badges) states[key].badges = {};
+        if (states[key].bingoCompletedRounds == null) states[key].bingoCompletedRounds = 0;
+        if (states[key].bingoStartTs == null) states[key].bingoStartTs = 0;
+        if (key === 'cycling') {
+          const offset = TRACKERS.cycling.offset;
+          let tachoSum = 0;
+          states[key].entries.forEach(e => { if (e.source !== 'free') tachoSum += e.count; });
+          states[key].lastTachoStand = offset + Math.round(tachoSum * 10) / 10;
+        }
+        localStorage.setItem(tk.storageKey, JSON.stringify(states[key]));
+        needsRender = true;
+        continue;
+      }
+
       // Merge strategy: combine entries by unique ID
       if (cloudUpdatedAt !== localUpdatedAt && (cloudEntries.length > 0 || localEntries.length > 0)) {
         const localById = new Map(localEntries.map(e => [e.id, e]));
@@ -1747,8 +1765,8 @@ async function pullFromCloudAll() {
 
     if (needsRender) {
       entriesCollapse = null;
-      render();
     }
+    render();
     setSyncStatus('online', 'Synced');
   } catch (e) {
     console.error('Cloud pull failed', e);
