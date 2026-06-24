@@ -1612,11 +1612,15 @@ async function pushToCloud(key) {
   const tk = TRACKERS[key];
   try {
     setSyncStatus('syncing', 'Sync...');
-    await fetch(`${firebaseUrl}/tracker/${syncCode}/${tk.syncKey}.json`, {
+    const res = await fetch(`${firebaseUrl}/tracker/${syncCode}/${tk.syncKey}.json`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(states[key])
     });
+    if (!res.ok) {
+      setSyncStatus('error', key + ': Server ' + res.status);
+      return;
+    }
     setSyncStatus('online', 'Synced');
   } catch (e) {
     console.error('Cloud push failed for', key, e);
@@ -1635,12 +1639,19 @@ async function pullFromCloudAll() {
   try {
     setSyncStatus('syncing', 'Lade...');
     const res = await fetch(`${firebaseUrl}/tracker/${syncCode}.json`);
-    const ct = res.headers.get('content-type') || '';
-    if (!ct.includes('json')) {
-      setSyncStatus('error', 'Server antwortet nicht (kein JSON)');
+    if (!res.ok) {
+      setSyncStatus('error', 'Server-Fehler: ' + res.status);
       return;
     }
-    const cloudAll = await res.json();
+    const text = await res.text();
+    let cloudAll;
+    try {
+      cloudAll = JSON.parse(text);
+    } catch (parseErr) {
+      console.error('JSON parse failed, response was:', text.substring(0, 200));
+      setSyncStatus('error', 'Antwort kein JSON — Cache leeren & neu laden');
+      return;
+    }
     if (!cloudAll) {
       // Cloud is empty, push all local states
       for (const key of Object.keys(TRACKERS)) {
