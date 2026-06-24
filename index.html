@@ -1649,7 +1649,13 @@ async function pullFromCloudAll() {
     for (const key of Object.keys(TRACKERS)) {
       const tk = TRACKERS[key];
       const cloudState = cloudAll[tk.syncKey];
-      if (!cloudState) continue;
+      if (!cloudState) {
+        // Cloud has no data for this tracker — push local if we have entries
+        if (states[key].entries && states[key].entries.length > 0) {
+          await pushToCloud(key);
+        }
+        continue;
+      }
 
       const cloudEntries = cloudState.entries || [];
       const localEntries = states[key].entries || [];
