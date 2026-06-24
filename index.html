@@ -1570,7 +1570,12 @@ function loadState(key) {
 function saveState(key) {
   const tk = TRACKERS[key];
   states[key].updatedAt = Date.now();
-  localStorage.setItem(tk.storageKey, JSON.stringify(states[key]));
+  try {
+    localStorage.setItem(tk.storageKey, JSON.stringify(states[key]));
+  } catch (e) {
+    console.error('localStorage write failed for', key, e);
+    alert('Speicherfehler! Daten konnten nicht lokal gespeichert werden. Bitte Browser-Cache leeren.');
+  }
   scheduleCloudPush(key);
 }
 
@@ -1646,11 +1651,60 @@ async function pullFromCloudAll() {
       const cloudState = cloudAll[tk.syncKey];
       if (!cloudState) continue;
 
+      const cloudEntries = cloudState.entries || [];
+      const localEntries = states[key].entries || [];
       const cloudUpdatedAt = cloudState.updatedAt || 0;
       const localUpdatedAt = states[key].updatedAt || 0;
 
-      if (cloudUpdatedAt > localUpdatedAt) {
-        states[key] = cloudState;
+      // Protection: never overwrite local data with empty cloud state
+      if (cloudEntries.length === 0 && localEntries.length > 0) {
+        // Cloud is empty but we have data — push ours
+        await pushToCloud(key);
+        continue;
+      }
+
+      // Merge strategy: combine entries by unique ID
+      if (cloudUpdatedAt !== localUpdatedAt && (cloudEntries.length > 0 || localEntries.length > 0)) {
+        const localById = new Map(localEntries.map(e => [e.id, e]));
+        const cloudById = new Map(cloudEntries.map(e => [e.id, e]));
+        let merged = [];
+        // Add all local entries
+        for (const e of localEntries) merged.push(e);
+        // Add cloud entries that don't exist locally (new from other device)
+        for (const e of cloudEntries) {
+          if (!localById.has(e.id)) merged.push(e);
+        }
+        // Remove entries that were deleted locally (exist in cloud but deleted here)
+        // — if cloud has entries not in local AND local has a newer timestamp, those were deleted locally
+        if (localUpdatedAt > cloudUpdatedAt) {
+          const keepIds = new Set(localEntries.map(e => e.id));
+          // Also keep genuinely new cloud entries (those not in any prior local state)
+          // Heuristic: cloud entries newer than localUpdatedAt are new, not deleted
+          for (const e of cloudEntries) {
+            if (!keepIds.has(e.id) && (e.ts || 0) > localUpdatedAt) keepIds.add(e.id);
+          }
+          merged = merged.filter(e => keepIds.has(e.id));
+        }
+        // If cloud is newer, remove entries that were deleted on the other device
+        if (cloudUpdatedAt > localUpdatedAt) {
+          const keepIds = new Set(cloudEntries.map(e => e.id));
+          for (const e of localEntries) {
+            if (!keepIds.has(e.id) && (e.ts || 0) > cloudUpdatedAt) keepIds.add(e.id);
+          }
+          merged = merged.filter(e => keepIds.has(e.id));
+        }
+        // Sort by timestamp
+        merged.sort((a, b) => (a.ts || 0) - (b.ts || 0));
+
+        // Merge badges (union — keep all unlocked)
+        const mergedBadges = Object.assign({}, states[key].badges || {}, cloudState.badges || {});
+
+        // Take the newer metadata
+        const newer = cloudUpdatedAt > localUpdatedAt ? cloudState : states[key];
+        states[key] = Object.assign({}, newer, {
+          entries: merged,
+          badges: mergedBadges
+        });
         if (!states[key].entries) states[key].entries = [];
         if (!states[key].badges) states[key].badges = {};
         if (states[key].bingoCompletedRounds == null) states[key].bingoCompletedRounds = 0;
@@ -1661,10 +1715,11 @@ async function pullFromCloudAll() {
           states[key].entries.forEach(e => { if (e.source !== 'free') tachoSum += e.count; });
           states[key].lastTachoStand = offset + Math.round(tachoSum * 10) / 10;
         }
+        states[key].updatedAt = Math.max(cloudUpdatedAt, localUpdatedAt);
         localStorage.setItem(tk.storageKey, JSON.stringify(states[key]));
-        if (key === activeTracker) needsRender = true;
-      } else if (localUpdatedAt > cloudUpdatedAt) {
+        // Push merged state back to cloud
         await pushToCloud(key);
+        if (key === activeTracker) needsRender = true;
       }
     }
 
@@ -1832,9 +1887,9 @@ function computeStats() {
   const consThresholds = new Set();
   for (const b of getBadges()) {
     if (b.cat === 'cons') {
-      // Extract min from the badge definition
-      const match = b.id.match(/cons_\d+_(\d+)/);
-      if (match) consThresholds.add(parseInt(match[1]));
+      // Extract min from the badge definition (supports decimals like 0.1)
+      const match = b.id.match(/cons_\d+_([\d.]+)/);
+      if (match) consThresholds.add(parseFloat(match[1]));
     }
   }
   const bestConsistency = {};
