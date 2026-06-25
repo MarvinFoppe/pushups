@@ -1583,28 +1583,35 @@ function getState() { return states[activeTracker]; }
 function getConfig() { return TRACKERS[activeTracker]; }
 function getBadges() { return BADGES_BY_TRACKER[activeTracker]; }
 
-// URL parameter ?reset=1 clears all tracker localStorage for a clean cloud pull
+// URL parameter ?reset=1 clears ALL localStorage for a completely clean start
 const urlParams = new URLSearchParams(window.location.search);
 if (urlParams.get('reset') === '1') {
-  for (const key of Object.keys(TRACKERS)) {
-    localStorage.removeItem(TRACKERS[key].storageKey);
-  }
-  // Keep firebase-url and sync-code so cloud pull still works
-  // Remove ?reset=1 from URL so it doesn't reset on every reload
+  localStorage.clear(); // Clear EVERYTHING including firebase-url, sync-code
   const cleanUrl = window.location.pathname;
   window.history.replaceState({}, '', cleanUrl);
+}
+// Unregister any service workers
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
 }
 
 // Load all states on init
 for (const key of Object.keys(TRACKERS)) loadState(key);
 
 // ============================================================
-// FIREBASE SYNC
+// FIREBASE SYNC — COMPLETELY REWRITTEN
 // ============================================================
-let firebaseUrl = localStorage.getItem('firebase-url') || '';
-let syncCode = localStorage.getItem('sync-code') || '';
+// HARDCODED — no localStorage dependency for connection
+const FIREBASE_URL = 'https://filme-5b578-default-rtdb.europe-west1.firebasedatabase.app';
+const SYNC_CODE = 'C3UXHT';
+// Also store in localStorage for legacy compatibility
+localStorage.setItem('firebase-url', FIREBASE_URL);
+localStorage.setItem('sync-code', SYNC_CODE);
+let firebaseUrl = FIREBASE_URL;
+let syncCode = SYNC_CODE;
+
 let pushTimeouts = {};
-let initialSyncDone = false; // Block pushes until first pull completes
+let initialSyncDone = false;
 
 function setSyncStatus(status, text) {
   const dot = document.getElementById('syncDot');
@@ -1620,112 +1627,187 @@ function generateSyncCode() {
   return code;
 }
 
+// XMLHttpRequest-based fetch — bypasses any fetch API issues
+function xhrGet(url) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    xhr.setRequestHeader('Cache-Control', 'no-cache, no-store');
+    xhr.setRequestHeader('Pragma', 'no-cache');
+    xhr.onload = () => resolve({ status: xhr.status, text: xhr.responseText });
+    xhr.onerror = () => reject(new Error('XHR network error'));
+    xhr.ontimeout = () => reject(new Error('XHR timeout'));
+    xhr.timeout = 15000;
+    xhr.send();
+  });
+}
+
+function xhrPut(url, data) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('PUT', url, true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.onload = () => resolve({ status: xhr.status, text: xhr.responseText });
+    xhr.onerror = () => reject(new Error('XHR network error'));
+    xhr.ontimeout = () => reject(new Error('XHR timeout'));
+    xhr.timeout = 15000;
+    xhr.send(JSON.stringify(data));
+  });
+}
+
 async function pushToCloud(key) {
-  if (!firebaseUrl || !syncCode) return;
   const tk = TRACKERS[key];
   const localEntries = states[key].entries || [];
-  // PROTECTION: if local has no entries, check cloud first before overwriting
+  // PROTECTION: NEVER push empty data if cloud has real data
   if (localEntries.length === 0) {
     try {
-      const checkRes = await fetch(`${firebaseUrl}/tracker/${syncCode}/${tk.syncKey}.json`);
-      if (checkRes.ok) {
-        const checkText = await checkRes.text();
-        try {
-          const cloudCheck = JSON.parse(checkText);
-          if (cloudCheck && (cloudCheck.entries || []).length > 0) {
-            console.warn('PUSH BLOCKED for', key, ': local empty but cloud has', cloudCheck.entries.length, 'entries');
-            return; // Never overwrite populated cloud with empty local
+      const check = await xhrGet(`${FIREBASE_URL}/tracker/${SYNC_CODE}/${tk.syncKey}.json?_t=${Date.now()}`);
+      if (check.status === 200) {
+        const cloudCheck = JSON.parse(check.text);
+        if (cloudCheck) {
+          let cEntries = cloudCheck.entries;
+          if (cEntries && !Array.isArray(cEntries)) cEntries = Object.values(cEntries);
+          if (cEntries && cEntries.length > 0) {
+            console.warn('PUSH BLOCKED:', key, '- local empty but cloud has', cEntries.length);
+            return;
           }
-        } catch(e) { /* parse fail, safe to push */ }
+        }
       }
-    } catch(e) { /* network fail, skip protection check */ }
+    } catch(e) { /* skip check */ }
   }
   try {
     setSyncStatus('syncing', 'Sync...');
-    const res = await fetch(`${firebaseUrl}/tracker/${syncCode}/${tk.syncKey}.json`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(states[key])
-    });
-    if (!res.ok) {
+    const res = await xhrPut(`${FIREBASE_URL}/tracker/${SYNC_CODE}/${tk.syncKey}.json`, states[key]);
+    if (res.status >= 200 && res.status < 300) {
+      setSyncStatus('online', 'Synced');
+    } else {
       setSyncStatus('error', key + ': Server ' + res.status);
-      return;
     }
-    setSyncStatus('online', 'Synced');
   } catch (e) {
-    console.error('Cloud push failed for', key, e);
-    setSyncStatus('error', key + ': ' + (e.message || 'Push-Fehler').substring(0, 25));
+    console.error('Push failed:', key, e);
+    setSyncStatus('error', key + ': ' + (e.message || 'Fehler').substring(0, 25));
   }
 }
 
 function scheduleCloudPush(key) {
-  if (!firebaseUrl || !syncCode) return;
-  if (!initialSyncDone) return; // Don't push before first pull completes
+  if (!initialSyncDone) return;
   clearTimeout(pushTimeouts[key]);
   pushTimeouts[key] = setTimeout(() => pushToCloud(key), 800);
 }
 
+// Helper: apply cloud state for a tracker
+function applyCloudState(key, cloudState) {
+  const tk = TRACKERS[key];
+  states[key] = Object.assign({}, cloudState);
+  if (!states[key].entries) states[key].entries = [];
+  if (!states[key].badges) states[key].badges = {};
+  if (states[key].bingoCompletedRounds == null) states[key].bingoCompletedRounds = 0;
+  if (states[key].bingoStartTs == null) states[key].bingoStartTs = 0;
+  if (key === 'cycling') {
+    const offset = TRACKERS.cycling.offset;
+    let tachoSum = 0;
+    states[key].entries.forEach(e => { if (e.source !== 'free') tachoSum += e.count; });
+    states[key].lastTachoStand = offset + Math.round(tachoSum * 10) / 10;
+  }
+  localStorage.setItem(tk.storageKey, JSON.stringify(states[key]));
+}
+
+// Helper: normalize entries (Firebase array-to-object fix)
+function normalizeEntries(raw) {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+  return Object.values(raw);
+}
+
 async function pullFromCloudAll() {
-  if (!firebaseUrl || !syncCode) return;
   try {
     setSyncStatus('syncing', 'Lade...');
     let anyChanged = false;
     let loadedCount = 0;
-    let errorLog = [];
+    let errors = [];
 
-    // Pull each tracker individually to avoid large response issues on mobile
-    for (const key of Object.keys(TRACKERS)) {
-      const tk = TRACKERS[key];
+    // BULK FETCH — one request for ALL tracker data (more reliable)
+    const bulkUrl = `${FIREBASE_URL}/tracker/${SYNC_CODE}.json?_t=${Date.now()}`;
+    let bulkData = null;
+    let lastError = null;
+
+    // Try up to 3 times with XMLHttpRequest
+    for (let attempt = 1; attempt <= 3; attempt++) {
       try {
-        const res = await fetch(`${firebaseUrl}/tracker/${syncCode}/${tk.syncKey}.json`);
-        if (!res.ok) { errorLog.push(key + ':HTTP' + res.status); continue; }
-        const text = await res.text();
-        let cloudState;
-        try { cloudState = JSON.parse(text); } catch(e) { errorLog.push(key + ':parseErr'); continue; }
+        if (attempt > 1) {
+          setSyncStatus('syncing', 'Retry ' + attempt + '...');
+          await new Promise(r => setTimeout(r, attempt * 1000));
+        }
+        const res = await xhrGet(bulkUrl + '&attempt=' + attempt);
+        if (res.status === 200 && res.text && res.text !== 'null') {
+          bulkData = JSON.parse(res.text);
+          break; // Success
+        }
+        lastError = 'Status ' + res.status + ', bytes=' + (res.text || '').length;
+      } catch(e) {
+        lastError = e.message;
+      }
+    }
+
+    if (!bulkData) {
+      // Bulk fetch failed — try individual fetches as fallback
+      for (const key of Object.keys(TRACKERS)) {
+        const tk = TRACKERS[key];
+        try {
+          const url = `${FIREBASE_URL}/tracker/${SYNC_CODE}/${tk.syncKey}.json?_t=${Date.now()}`;
+          const res = await xhrGet(url);
+          if (res.status === 200 && res.text && res.text !== 'null') {
+            const cloudState = JSON.parse(res.text);
+            const cloudEntries = normalizeEntries(cloudState.entries);
+            const localEntries = states[key].entries || [];
+            if (cloudEntries.length > 0 && cloudEntries.length >= localEntries.length) {
+              cloudState.entries = cloudEntries;
+              applyCloudState(key, cloudState);
+              anyChanged = true;
+              loadedCount++;
+            }
+          }
+        } catch(e) {
+          errors.push(key + ':' + e.message);
+        }
+      }
+    } else {
+      // Bulk fetch succeeded — process each tracker
+      for (const key of Object.keys(TRACKERS)) {
+        const tk = TRACKERS[key];
+        const cloudState = bulkData[tk.syncKey];
         if (!cloudState) {
-          // Cloud has no data for this tracker — push local if we have entries
+          // No cloud data for this tracker — push local if we have data
           if (states[key].entries && states[key].entries.length > 0) {
             await pushToCloud(key);
           }
           continue;
         }
 
-        const cloudEntries = cloudState.entries || [];
+        const cloudEntries = normalizeEntries(cloudState.entries);
         const localEntries = states[key].entries || [];
         const cloudUpdatedAt = cloudState.updatedAt || 0;
         const localUpdatedAt = states[key].updatedAt || 0;
 
-        // Protection: never overwrite local data with empty cloud state
+        // CASE 1: Cloud empty, local has data → push local
         if (cloudEntries.length === 0 && localEntries.length > 0) {
           await pushToCloud(key);
           continue;
         }
 
-        // Cloud has more data than local — take cloud state
-        // This covers: fresh device, reset device, corrupted local state
+        // CASE 2: Cloud has more data → take cloud (fresh device, reset, etc.)
         if (cloudEntries.length > localEntries.length && cloudEntries.length > 0) {
-          states[key] = Object.assign({}, cloudState);
-          if (!states[key].entries) states[key].entries = [];
-          if (!states[key].badges) states[key].badges = {};
-          if (states[key].bingoCompletedRounds == null) states[key].bingoCompletedRounds = 0;
-          if (states[key].bingoStartTs == null) states[key].bingoStartTs = 0;
-          if (key === 'cycling') {
-            const offset = TRACKERS.cycling.offset;
-            let tachoSum = 0;
-            states[key].entries.forEach(e => { if (e.source !== 'free') tachoSum += e.count; });
-            states[key].lastTachoStand = offset + Math.round(tachoSum * 10) / 10;
-          }
-          localStorage.setItem(tk.storageKey, JSON.stringify(states[key]));
+          cloudState.entries = cloudEntries;
+          applyCloudState(key, cloudState);
           anyChanged = true;
           loadedCount++;
           continue;
         }
 
-        // Merge strategy: combine entries by unique ID
+        // CASE 3: Same count but different timestamps → merge
         if (cloudUpdatedAt !== localUpdatedAt && (cloudEntries.length > 0 || localEntries.length > 0)) {
           const localById = new Map(localEntries.map(e => [e.id, e]));
-          let merged = [];
-          for (const e of localEntries) merged.push(e);
+          let merged = [...localEntries];
           for (const e of cloudEntries) {
             if (!localById.has(e.id)) merged.push(e);
           }
@@ -1747,35 +1829,36 @@ async function pullFromCloudAll() {
           const mergedBadges = Object.assign({}, states[key].badges || {}, cloudState.badges || {});
           const newer = cloudUpdatedAt > localUpdatedAt ? cloudState : states[key];
           states[key] = Object.assign({}, newer, { entries: merged, badges: mergedBadges });
-          if (!states[key].entries) states[key].entries = [];
-          if (!states[key].badges) states[key].badges = {};
+          states[key].entries = merged;
+          states[key].badges = mergedBadges;
           if (states[key].bingoCompletedRounds == null) states[key].bingoCompletedRounds = 0;
           if (states[key].bingoStartTs == null) states[key].bingoStartTs = 0;
           if (key === 'cycling') {
             const offset = TRACKERS.cycling.offset;
             let tachoSum = 0;
-            states[key].entries.forEach(e => { if (e.source !== 'free') tachoSum += e.count; });
+            merged.forEach(e => { if (e.source !== 'free') tachoSum += e.count; });
             states[key].lastTachoStand = offset + Math.round(tachoSum * 10) / 10;
           }
           states[key].updatedAt = Math.max(cloudUpdatedAt, localUpdatedAt);
-          localStorage.setItem(tk.storageKey, JSON.stringify(states[key]));
+          const tkk = TRACKERS[key];
+          localStorage.setItem(tkk.storageKey, JSON.stringify(states[key]));
           await pushToCloud(key);
           anyChanged = true;
           loadedCount++;
         }
-      } catch (trackerErr) {
-        console.error('Pull failed for', key, trackerErr);
       }
     }
 
     if (anyChanged) entriesCollapse = null;
     render();
-    initialSyncDone = true; // Allow pushes now that pull is complete
-    const statusMsg = loadedCount > 0 ? loadedCount + '/6 geladen' : (errorLog.length > 0 ? errorLog.join(', ') : 'Keine Änderungen');
+    initialSyncDone = true;
+    const statusMsg = loadedCount > 0
+      ? loadedCount + '/6 geladen'
+      : (errors.length > 0 ? errors.join(', ') : 'Keine Änderungen');
     setSyncStatus('online', statusMsg);
   } catch (e) {
     console.error('Cloud pull failed', e);
-    initialSyncDone = true; // Allow pushes even if pull failed (user may want to push)
+    initialSyncDone = true;
     setSyncStatus('error', 'Sync: ' + (e.message || 'Fehler').substring(0, 30));
   }
 }
