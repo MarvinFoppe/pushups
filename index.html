@@ -1639,16 +1639,18 @@ async function pullFromCloudAll() {
   try {
     setSyncStatus('syncing', 'Lade...');
     let anyChanged = false;
+    let loadedCount = 0;
+    let errorLog = [];
 
     // Pull each tracker individually to avoid large response issues on mobile
     for (const key of Object.keys(TRACKERS)) {
       const tk = TRACKERS[key];
       try {
         const res = await fetch(`${firebaseUrl}/tracker/${syncCode}/${tk.syncKey}.json`);
-        if (!res.ok) continue;
+        if (!res.ok) { errorLog.push(key + ':HTTP' + res.status); continue; }
         const text = await res.text();
         let cloudState;
-        try { cloudState = JSON.parse(text); } catch(e) { continue; }
+        try { cloudState = JSON.parse(text); } catch(e) { errorLog.push(key + ':parseErr'); continue; }
 
         if (!cloudState) {
           // Cloud has no data for this tracker — push local if we have entries
@@ -1684,6 +1686,7 @@ async function pullFromCloudAll() {
           }
           localStorage.setItem(tk.storageKey, JSON.stringify(states[key]));
           anyChanged = true;
+          loadedCount++;
           continue;
         }
 
@@ -1727,6 +1730,7 @@ async function pullFromCloudAll() {
           localStorage.setItem(tk.storageKey, JSON.stringify(states[key]));
           await pushToCloud(key);
           anyChanged = true;
+          loadedCount++;
         }
       } catch (trackerErr) {
         console.error('Pull failed for', key, trackerErr);
@@ -1735,7 +1739,8 @@ async function pullFromCloudAll() {
 
     if (anyChanged) entriesCollapse = null;
     render();
-    setSyncStatus('online', 'Synced');
+    const statusMsg = loadedCount > 0 ? loadedCount + '/6 geladen' : (errorLog.length > 0 ? errorLog.join(', ') : 'Keine Änderungen');
+    setSyncStatus('online', statusMsg);
   } catch (e) {
     console.error('Cloud pull failed', e);
     setSyncStatus('error', 'Sync: ' + (e.message || 'Fehler').substring(0, 30));
