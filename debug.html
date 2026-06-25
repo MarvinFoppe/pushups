@@ -1781,12 +1781,30 @@ async function pullFromCloudAll() {
     const statusMsg = loadedCount > 0 ? loadedCount + '/6 geladen' : (errorLog.length > 0 ? errorLog.join(', ') : 'Keine Änderungen');
     setSyncStatus('online', statusMsg);
     // Show debug info if ?debug=1 or always for first 30 seconds
-    if (debugLog.length > 0) {
-      const debugEl = document.createElement('div');
-      debugEl.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#000;color:#0f0;font:10px monospace;padding:4px;z-index:9999;max-height:40vh;overflow:auto;';
-      debugEl.textContent = 'URL:' + firebaseUrl + '/tracker/' + syncCode + '/ | ' + debugLog.join(' | ');
-      document.body.appendChild(debugEl);
+    // Unregister any service workers that might intercept fetches
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(regs => {
+        regs.forEach(r => r.unregister());
+      });
     }
+    const debugEl = document.createElement('div');
+    debugEl.id = 'syncDebug';
+    debugEl.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#000;color:#0f0;font:10px monospace;padding:4px;z-index:9999;max-height:40vh;overflow:auto;';
+    debugEl.textContent = 'URL:' + firebaseUrl + '/tracker/' + syncCode + '/ | ' + debugLog.join(' | ');
+    document.body.appendChild(debugEl);
+    // Independent test fetch 5 seconds later to check if Firebase data changes
+    setTimeout(async () => {
+      try {
+        const testUrl = firebaseUrl + '/tracker/' + syncCode + '/pushups.json?_retest=' + Date.now();
+        const r = await fetch(testUrl, { cache: 'no-store' });
+        const t = await r.text();
+        const d = document.getElementById('syncDebug');
+        if (d) d.textContent += ' | RETEST(5s):bytes=' + t.length + ',status=' + r.status + ',start=' + t.substring(0, 40);
+      } catch(e) {
+        const d = document.getElementById('syncDebug');
+        if (d) d.textContent += ' | RETEST_ERR:' + e.message;
+      }
+    }, 5000);
   } catch (e) {
     console.error('Cloud pull failed', e);
     initialSyncDone = true; // Allow pushes even if pull failed (user may want to push)
