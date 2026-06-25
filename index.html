@@ -1652,6 +1652,11 @@ async function pullFromCloudAll() {
       setSyncStatus('error', 'Antwort kein JSON — Cache leeren & neu laden');
       return;
     }
+    // DIAG: show what we got from cloud
+    const diagKeys = cloudAll ? Object.keys(cloudAll) : [];
+    const diagInfo = diagKeys.map(k => k + ':' + ((cloudAll[k]?.entries||[]).length) + 'e').join(', ');
+    alert('CLOUD KEYS: ' + diagInfo + '\ncloudAll null? ' + (!cloudAll) + '\nType: ' + typeof cloudAll);
+
     if (!cloudAll) {
       // Cloud is empty, push all local states
       for (const key of Object.keys(TRACKERS)) {
