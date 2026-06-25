@@ -1627,7 +1627,7 @@ async function pushToCloud(key) {
   // PROTECTION: if local has no entries, check cloud first before overwriting
   if (localEntries.length === 0) {
     try {
-      const checkRes = await fetch(`${firebaseUrl}/tracker/${syncCode}/${tk.syncKey}.json`);
+      const checkRes = await fetch(`${firebaseUrl}/tracker/${syncCode}/${tk.syncKey}.json`, { cache: 'no-store' });
       if (checkRes.ok) {
         const checkText = await checkRes.text();
         try {
@@ -1678,7 +1678,7 @@ async function pullFromCloudAll() {
     for (const key of Object.keys(TRACKERS)) {
       const tk = TRACKERS[key];
       try {
-        const res = await fetch(`${firebaseUrl}/tracker/${syncCode}/${tk.syncKey}.json`);
+        const res = await fetch(`${firebaseUrl}/tracker/${syncCode}/${tk.syncKey}.json`, { cache: 'no-store' });
         if (!res.ok) { errorLog.push(key + ':HTTP' + res.status); debugLog.push(key + ':HTTP' + res.status); continue; }
         const text = await res.text();
         let cloudState;
@@ -1698,7 +1698,7 @@ async function pullFromCloudAll() {
         }
         const cloudEntries = cloudEntriesRaw || [];
         const localEntries = states[key].entries || [];
-        debugLog.push(key + ':cloud=' + cloudEntries.length + ',local=' + localEntries.length + ',bytes=' + text.length);
+        debugLog.push(key + ':cloud=' + cloudEntries.length + ',local=' + localEntries.length + ',bytes=' + text.length + ',preview=' + text.substring(0, 60));
         const cloudUpdatedAt = cloudState.updatedAt || 0;
         const localUpdatedAt = states[key].updatedAt || 0;
 
