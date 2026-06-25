@@ -1592,6 +1592,7 @@ for (const key of Object.keys(TRACKERS)) loadState(key);
 let firebaseUrl = localStorage.getItem('firebase-url') || '';
 let syncCode = localStorage.getItem('sync-code') || '';
 let pushTimeouts = {};
+let initialSyncDone = false; // Block pushes until first pull completes
 
 function setSyncStatus(status, text) {
   const dot = document.getElementById('syncDot');
@@ -1610,6 +1611,23 @@ function generateSyncCode() {
 async function pushToCloud(key) {
   if (!firebaseUrl || !syncCode) return;
   const tk = TRACKERS[key];
+  const localEntries = states[key].entries || [];
+  // PROTECTION: if local has no entries, check cloud first before overwriting
+  if (localEntries.length === 0) {
+    try {
+      const checkRes = await fetch(`${firebaseUrl}/tracker/${syncCode}/${tk.syncKey}.json`);
+      if (checkRes.ok) {
+        const checkText = await checkRes.text();
+        try {
+          const cloudCheck = JSON.parse(checkText);
+          if (cloudCheck && (cloudCheck.entries || []).length > 0) {
+            console.warn('PUSH BLOCKED for', key, ': local empty but cloud has', cloudCheck.entries.length, 'entries');
+            return; // Never overwrite populated cloud with empty local
+          }
+        } catch(e) { /* parse fail, safe to push */ }
+      }
+    } catch(e) { /* network fail, skip protection check */ }
+  }
   try {
     setSyncStatus('syncing', 'Sync...');
     const res = await fetch(`${firebaseUrl}/tracker/${syncCode}/${tk.syncKey}.json`, {
@@ -1630,6 +1648,7 @@ async function pushToCloud(key) {
 
 function scheduleCloudPush(key) {
   if (!firebaseUrl || !syncCode) return;
+  if (!initialSyncDone) return; // Don't push before first pull completes
   clearTimeout(pushTimeouts[key]);
   pushTimeouts[key] = setTimeout(() => pushToCloud(key), 800);
 }
@@ -1651,11 +1670,6 @@ async function pullFromCloudAll() {
         const text = await res.text();
         let cloudState;
         try { cloudState = JSON.parse(text); } catch(e) { errorLog.push(key + ':parseErr'); continue; }
-        // DIAG: show first tracker details
-        if (key === 'pushups') {
-          alert('PUSHUPS DIAG:\nCloud entries: ' + ((cloudState?.entries||[]).length) + '\nLocal entries: ' + ((states[key]?.entries||[]).length) + '\nCloud updatedAt: ' + (cloudState?.updatedAt||0) + '\nLocal updatedAt: ' + (states[key]?.updatedAt||0) + '\nResponse length: ' + text.length);
-        }
-
         if (!cloudState) {
           // Cloud has no data for this tracker — push local if we have entries
           if (states[key].entries && states[key].entries.length > 0) {
@@ -1743,10 +1757,12 @@ async function pullFromCloudAll() {
 
     if (anyChanged) entriesCollapse = null;
     render();
+    initialSyncDone = true; // Allow pushes now that pull is complete
     const statusMsg = loadedCount > 0 ? loadedCount + '/6 geladen' : (errorLog.length > 0 ? errorLog.join(', ') : 'Keine Änderungen');
     setSyncStatus('online', statusMsg);
   } catch (e) {
     console.error('Cloud pull failed', e);
+    initialSyncDone = true; // Allow pushes even if pull failed (user may want to push)
     setSyncStatus('error', 'Sync: ' + (e.message || 'Fehler').substring(0, 30));
   }
 }
