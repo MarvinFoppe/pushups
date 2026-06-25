@@ -1,0 +1,2815 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fitness Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;700&family=Archivo:wght@400;600;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #58585f;
+    --bg-elev: #6a6a72;
+    --bg-elev-2: #7a7a82;
+    --border: #888892;
+    --text: #ffffff;
+    --text-dim: #e0ddd6;
+    --text-faint: #b8b4ad;
+    --accent: #ff6633;
+    --accent-2: #ffaa55;
+    --accent-glow: rgba(255, 102, 51, 0.4);
+    --success: #44cc88;
+    --locked: #7a7a82;
+    --locked-text: #b8b4ad;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Archivo', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(circle at 10% 0%, rgba(255, 102, 51, 0.1), transparent 40%),
+      radial-gradient(circle at 90% 100%, rgba(255, 170, 85, 0.06), transparent 40%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 32px 24px 80px;
+  }
+
+  /* HEADER */
+  .header {
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 24px;
+    margin-bottom: 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .brand {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 0.15em;
+    color: var(--text);
+  }
+  .brand span { color: var(--accent); }
+
+  .header-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .sync-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .sync-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #888;
+    transition: background 0.3s;
+  }
+  .sync-dot.online { background: var(--success); box-shadow: 0 0 6px rgba(68, 204, 136, 0.6); }
+  .sync-dot.syncing { background: var(--accent); animation: pulse 1s infinite; }
+  .sync-dot.error { background: #ff3344; }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  .btn-auth {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 6px 14px;
+    font-family: 'Archivo', sans-serif;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn-auth:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* TAB BAR */
+  .tab-bar {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 24px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+  }
+  .tab-bar::-webkit-scrollbar { display: none; }
+  .tab {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 10px 16px;
+    font-family: 'Archivo', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .tab:hover { color: var(--text); border-color: var(--text-dim); }
+  .tab.active {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: rgba(255,102,51,0.15);
+  }
+
+  /* COUNTER HERO */
+  .hero {
+    background: linear-gradient(135deg, #707078 0%, #6a6a72 100%);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    padding: 36px 32px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 280px; height: 280px;
+    background: radial-gradient(circle, var(--accent-glow), transparent 70%);
+    transform: translate(40%, -40%);
+    pointer-events: none;
+  }
+
+  .hero-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .counter-row {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+
+  .counter-current {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(56px, 10vw, 120px);
+    line-height: 0.9;
+    letter-spacing: -0.02em;
+    background: linear-gradient(180deg, #ffffff 0%, #d8d5ce 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .counter-total {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(28px, 4vw, 48px);
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+  }
+
+  .counter-percent {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    color: var(--accent);
+    margin-left: auto;
+    padding: 6px 12px;
+    border: 1px solid var(--accent);
+    background: rgba(255, 102, 51, 0.15);
+  }
+
+  .progress-bar {
+    height: 14px;
+    background: #48484f;
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+  .progress-bar-fill {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    width: 0%;
+    transition: width 0.6s cubic-bezier(.2,.9,.2,1);
+    box-shadow: 0 0 20px var(--accent-glow);
+  }
+  .progress-bar-fill::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 8px,
+      rgba(255,255,255,0.08) 8px,
+      rgba(255,255,255,0.08) 16px
+    );
+  }
+
+  .hero-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 16px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+  .stat {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .stat-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+  }
+  .stat-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    line-height: 1;
+    color: var(--text);
+  }
+  .stat-value.accent { color: var(--accent); }
+  .stat-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-faint);
+  }
+
+  /* SECTIONS */
+  .section {
+    margin-bottom: 32px;
+  }
+
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 8px;
+  }
+  .section-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 0.1em;
+  }
+  .section-title-accent { color: var(--accent); }
+
+  /* GRID LAYOUT */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  @media (max-width: 900px) {
+    .grid-2 { grid-template-columns: 1fr; }
+  }
+
+  /* INPUT FORM */
+  .input-card {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  .input-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  @media (max-width: 600px) { .input-row { grid-template-columns: 1fr; } }
+
+  .input-group label {
+    display: block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 6px;
+  }
+  input[type="number"], input[type="date"] {
+    width: 100%;
+    background: #4a4a52;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px;
+    transition: border-color 0.2s;
+  }
+  input[type="number"]:focus, input[type="date"]:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  input[type="date"] {
+    color-scheme: dark;
+  }
+
+  button {
+    cursor: pointer;
+    font-family: 'Archivo', sans-serif;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    transition: all 0.2s;
+  }
+
+  .btn-primary {
+    width: 100%;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 14px;
+    font-size: 14px;
+    margin-top: 8px;
+  }
+  .btn-primary:hover {
+    background: var(--accent-2);
+    transform: translateY(-1px);
+  }
+  .btn-primary:active { transform: translateY(0); }
+
+  .btn-small {
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    font-size: 10px;
+  }
+  .btn-small:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  .btn-small.danger:hover {
+    color: #ff3344;
+    border-color: #ff3344;
+  }
+
+  /* ENTRIES LIST */
+  .entries-card {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    padding: 24px;
+    max-height: 600px;
+    overflow-y: auto;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  .entries-card::-webkit-scrollbar { width: 8px; }
+  .entries-card::-webkit-scrollbar-track { background: #58585f; }
+  .entries-card::-webkit-scrollbar-thumb { background: var(--border); }
+
+  .day-group {
+    border-bottom: 1px solid var(--border);
+    padding: 10px 0;
+  }
+  .day-group:last-child { border-bottom: none; }
+  .day-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .day-date {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text);
+  }
+  .day-total {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    color: var(--accent);
+  }
+  .entry-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0 4px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+  .entry-actions {
+    display: flex;
+    gap: 4px;
+  }
+
+  /* Tree (Jahr/Monat/Tag) */
+  .tree-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 6px 4px;
+    user-select: none;
+    transition: background 0.15s;
+  }
+  .tree-header:hover { background: rgba(255,255,255,0.05); }
+  .tree-arrow {
+    font-size: 9px;
+    color: var(--text-faint);
+    width: 12px;
+    display: inline-block;
+  }
+  .tree-label {
+    flex: 1;
+  }
+  .tree-total {
+    font-family: 'Bebas Neue', sans-serif;
+    color: var(--accent);
+  }
+  .tree-header-year {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 0.08em;
+    border-top: 1px solid var(--border);
+    padding-top: 12px;
+    padding-bottom: 10px;
+  }
+  .tree-year:first-child .tree-header-year { border-top: none; padding-top: 6px; }
+  .tree-header-year .tree-total { font-size: 22px; }
+
+  .tree-header-month {
+    font-family: 'Archivo', sans-serif;
+    font-weight: 800;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text);
+    padding-left: 16px;
+  }
+  .tree-header-month .tree-total { font-size: 16px; }
+
+  .tree-header-day {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+    padding-left: 28px;
+  }
+  .tree-header-day .tree-total { font-size: 14px; color: var(--text); }
+
+  .tree-day .entry-item { padding-left: 44px; }
+
+  .empty {
+    text-align: center;
+    padding: 32px;
+    color: var(--text-faint);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+
+  /* BINGO */
+  .bingo-card {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .bingo-badge-row {
+    margin-bottom: 20px;
+    width: 100%;
+    max-width: 600px;
+  }
+  .bingo-badge {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    background: #4a4a52;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    transition: all 0.3s;
+  }
+  .bingo-badge.has-bingo {
+    background: linear-gradient(135deg, #707078 0%, #806b5a 100%);
+    border-color: var(--accent);
+    box-shadow: 0 2px 10px rgba(255, 102, 51, 0.25);
+  }
+  .bingo-badge-icon {
+    font-size: 28px;
+    filter: grayscale(1);
+    opacity: 0.4;
+    line-height: 1;
+  }
+  .bingo-badge.has-bingo .bingo-badge-icon {
+    filter: none;
+    opacity: 1;
+  }
+  .bingo-badge-info {
+    flex: 1;
+  }
+  .bingo-badge-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    letter-spacing: 0.05em;
+    color: var(--text-faint);
+  }
+  .bingo-badge.has-bingo .bingo-badge-title { color: var(--text); }
+  .bingo-badge-desc {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-faint);
+    margin-top: 2px;
+  }
+  .bingo-badge.has-bingo .bingo-badge-desc { color: var(--text-dim); }
+  .bingo-badge-counter {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 32px;
+    color: var(--text-faint);
+    letter-spacing: -0.02em;
+    min-width: 60px;
+    text-align: right;
+  }
+  .bingo-badge.has-bingo .bingo-badge-counter { color: var(--accent); }
+
+  .bingo-grid {
+    display: grid;
+    gap: 6px;
+    width: 100%;
+    max-width: 600px;
+  }
+  .bingo-cell {
+    aspect-ratio: 1;
+    background: #4a4a52;
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-faint);
+    transition: all 0.3s;
+    border-radius: 2px;
+  }
+  .bingo-cell.hit {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    border-color: var(--accent);
+    color: #fff;
+    box-shadow: 0 0 8px var(--accent-glow);
+    transform: scale(1.02);
+  }
+
+  /* CHART */
+  .chart-card {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  #chart30 {
+    width: 100%;
+    height: 280px;
+    display: block;
+  }
+
+  /* BADGES */
+  .badges-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+  }
+
+  .badge {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    padding: 14px;
+    position: relative;
+    transition: all 0.3s;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+  }
+  .badge.unlocked {
+    border-color: var(--accent);
+    background: linear-gradient(135deg, #707078 0%, #806b5a 100%);
+    box-shadow: 0 2px 10px rgba(255, 102, 51, 0.25);
+  }
+  .badge.unlocked::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 4px; height: 100%;
+    background: linear-gradient(180deg, var(--accent), var(--accent-2));
+  }
+
+  .badge-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .badge-icon {
+    font-size: 24px;
+    filter: grayscale(1);
+    opacity: 0.4;
+    line-height: 1;
+  }
+  .badge.unlocked .badge-icon {
+    filter: none;
+    opacity: 1;
+  }
+
+  .badge-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 16px;
+    letter-spacing: 0.05em;
+    color: var(--locked-text);
+    line-height: 1.1;
+  }
+  .badge.unlocked .badge-title { color: var(--text); }
+
+  .badge-desc {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-faint);
+    margin-bottom: 8px;
+    line-height: 1.4;
+  }
+  .badge.unlocked .badge-desc { color: var(--text-dim); }
+
+  .badge-progress-bar {
+    height: 4px;
+    background: #48484f;
+    overflow: hidden;
+    margin-bottom: 4px;
+  }
+  .badge-progress-fill {
+    height: 100%;
+    background: #a8a4a0;
+    transition: width 0.4s;
+  }
+  .badge.unlocked .badge-progress-fill {
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  }
+
+  .badge-progress-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-faint);
+    display: flex;
+    justify-content: space-between;
+  }
+  .badge.unlocked .badge-progress-text { color: var(--text-dim); }
+
+  .badge-unlocked-date {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--accent);
+    margin-top: 6px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* BADGE CATEGORIES */
+  .badge-cat {
+    margin-bottom: 24px;
+  }
+  .badge-cat-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .badge-cat-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+  .badge-cat-count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+  }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--bg-elev);
+    border: 1px solid var(--accent);
+    border-left: 4px solid var(--accent);
+    padding: 16px 20px;
+    z-index: 100;
+    transform: translateX(120%);
+    transition: transform 0.4s cubic-bezier(.2,.9,.2,1);
+    max-width: 320px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  .toast.show { transform: translateX(0); }
+  .toast.revoke {
+    border-color: var(--text-faint);
+    border-left-color: var(--text-faint);
+  }
+  .toast.revoke .toast-label { color: var(--text-faint); }
+  .toast-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .toast-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    letter-spacing: 0.05em;
+  }
+  .toast-desc {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+
+  /* FOOTER */
+  .footer {
+    margin-top: 48px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-faint);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .footer button {
+    background: transparent;
+    color: var(--text-faint);
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    font-size: 10px;
+  }
+  .footer button:hover { color: #ff3344; border-color: #ff3344; }
+
+  .tooltip {
+    position: fixed;
+    background: #1f1f23;
+    color: #fff;
+    border: 1px solid var(--accent);
+    padding: 6px 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    pointer-events: none;
+    z-index: 200;
+    display: none;
+    white-space: nowrap;
+  }
+
+  /* === MOBILE / RESPONSIVE === */
+  @media (max-width: 900px) {
+    .container { padding: 20px 14px 60px; }
+    .header { padding-bottom: 16px; margin-bottom: 20px; }
+    .brand { font-size: 22px; }
+    .hero { padding: 24px 20px; }
+    .hero-stats { grid-template-columns: repeat(2, 1fr); gap: 12px; padding-top: 16px; }
+    .stat-value { font-size: 24px; }
+    .section { margin-bottom: 24px; }
+    .section-title { font-size: 18px; }
+    .input-card, .entries-card, .chart-card, .bingo-card { padding: 16px; }
+    .entries-card { max-height: 480px; }
+  }
+
+  /* Phone */
+  @media (max-width: 600px) {
+    .container { padding: 14px 10px 50px; }
+    .header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 6px;
+    }
+    .brand { font-size: 20px; letter-spacing: 0.1em; }
+    .header-meta { font-size: 10px; }
+
+    .hero { padding: 18px 16px; border-left-width: 3px; }
+    .hero::after { width: 180px; height: 180px; }
+    .counter-row { gap: 6px; align-items: flex-end; }
+    .counter-total { font-size: 22px; }
+    .counter-percent {
+      width: 100%;
+      margin-left: 0;
+      margin-top: 8px;
+      text-align: center;
+      font-size: 12px;
+    }
+    .hero-stats { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .stat-label { font-size: 9px; letter-spacing: 0.1em; }
+    .stat-value { font-size: 22px; }
+    .stat-sub { font-size: 9px; }
+    .progress-bar { margin-bottom: 18px; }
+
+    input[type="number"], input[type="date"] { font-size: 16px; padding: 10px; }
+    .input-row { grid-template-columns: 1fr; gap: 10px; }
+    .btn-primary { padding: 14px; font-size: 13px; }
+
+    .section-header { flex-wrap: wrap; gap: 6px; }
+    .section-title { font-size: 16px; }
+
+    #chart30 { height: 240px; }
+
+    .bingo-card { padding: 14px 10px; }
+    .bingo-grid { gap: 3px; }
+    .bingo-cell { font-size: 11px; }
+    .bingo-badge { padding: 10px 12px; gap: 10px; }
+    .bingo-badge-icon { font-size: 22px; }
+    .bingo-badge-title { font-size: 15px; }
+    .bingo-badge-desc { font-size: 9px; }
+    .bingo-badge-counter { font-size: 24px; min-width: 44px; }
+
+    .badges-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
+    .badge { padding: 10px; }
+    .badge-title { font-size: 14px; }
+    .badge-desc { font-size: 9px; }
+    .badge-progress-text { font-size: 9px; }
+    .badge-icon { font-size: 20px; }
+    .badge-cat-title { font-size: 16px; }
+
+    .tree-header-year { font-size: 18px; padding-top: 10px; padding-bottom: 8px; }
+    .tree-header-year .tree-total { font-size: 18px; }
+    .tree-header-month { font-size: 12px; padding-left: 12px; }
+    .tree-header-month .tree-total { font-size: 14px; }
+    .tree-header-day { font-size: 11px; padding-left: 22px; }
+    .tree-header-day .tree-total { font-size: 13px; }
+    .tree-day .entry-item { padding-left: 32px; font-size: 11px; }
+    .btn-small { padding: 6px 10px; font-size: 11px; }
+
+    .footer {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+      text-align: center;
+    }
+    .footer button { width: 100%; padding: 10px; font-size: 11px; }
+
+    .toast {
+      left: 10px;
+      right: 10px;
+      bottom: 10px;
+      max-width: none;
+      padding: 14px 16px;
+    }
+  }
+
+  @media (hover: none) {
+    .heat-cell:hover, .bingo-cell:hover { transform: none; outline: none; }
+    .badge:hover { transform: none; }
+  }
+
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="brand" id="brandTitle">MISSION <span>1.000.000</span></div>
+    <div class="header-right">
+      <div class="sync-status" id="syncStatus" title="Sync-Status">
+        <span class="sync-dot" id="syncDot"></span>
+        <span id="syncText">Offline</span>
+      </div>
+      <button class="btn-auth" id="authBtn">Sync einrichten</button>
+      <div class="header-meta" id="todayLabel"></div>
+    </div>
+  </div>
+
+  <div class="tab-bar" id="tabBar">
+    <button class="tab active" data-tracker="pushups">&#x1F4AA; Liegestütze</button>
+    <button class="tab" data-tracker="pullups">&#x1F3CB;&#xFE0F; Klimmzüge</button>
+    <button class="tab" data-tracker="situps">&#x1F504; Situps</button>
+    <button class="tab" data-tracker="cycling">&#x1F6B4; Fahrrad</button>
+    <button class="tab" data-tracker="swimming">&#x1F3CA; Schwimmen</button>
+    <button class="tab" data-tracker="steps">&#x1F45F; Schritte</button>
+  </div>
+
+  <!-- HERO COUNTER -->
+  <div class="hero">
+    <div class="hero-label">Gesamtfortschritt</div>
+    <div class="counter-row">
+      <div class="counter-current" id="counterCurrent">0</div>
+      <div class="counter-total" id="counterTarget">/ 1.000.000</div>
+      <div class="counter-percent" id="counterPercent">0.000%</div>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-bar-fill" id="progressFill"></div>
+    </div>
+    <div class="hero-stats">
+      <div class="stat">
+        <div class="stat-label">Predicted Finish</div>
+        <div class="stat-value accent" id="predictedFinish">&mdash;</div>
+        <div class="stat-sub" id="predictedYears">&mdash;</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label" id="avgLabel">Daily Avg</div>
+        <div class="stat-value" id="dailyAvg">0</div>
+        <div class="stat-sub" id="daysActive">0 Tage</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Aktuelle Streak</div>
+        <div class="stat-value" id="currentStreak">0</div>
+        <div class="stat-sub">Tage in Folge</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Tagesrekord</div>
+        <div class="stat-value" id="recordDay">0</div>
+        <div class="stat-sub" id="recordDayDate">&mdash;</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Bestes Set</div>
+        <div class="stat-value" id="recordSet">0</div>
+        <div class="stat-sub" id="recordSetDate">&mdash;</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Wochenrekord</div>
+        <div class="stat-value" id="recordWeek">0</div>
+        <div class="stat-sub" id="recordWeekDate">&mdash;</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Monatsrekord</div>
+        <div class="stat-value" id="recordMonth">0</div>
+        <div class="stat-sub" id="recordMonthDate">&mdash;</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INPUT + ENTRIES -->
+  <div class="grid-2">
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title"><span class="section-title-accent">&#x203A;</span> Eintrag</div>
+      </div>
+      <div class="input-card">
+        <!-- Standard input (all except cycling) -->
+        <div id="inputStandard">
+          <div class="input-row">
+            <div class="input-group">
+              <label for="inputCount" id="inputLabel">Liegestütze</label>
+              <input type="number" id="inputCount" min="1" step="1" placeholder="z. B. 50">
+            </div>
+            <div class="input-group">
+              <label for="inputDate">Datum</label>
+              <input type="date" id="inputDate">
+            </div>
+          </div>
+        </div>
+        <!-- Cycling input -->
+        <div id="inputCycling" style="display:none">
+          <div class="input-row">
+            <div class="input-group">
+              <label for="inputTacho">Tacho-Stand (km) <span id="tachoHint" style="font-size:9px;color:var(--text-faint);text-transform:none;letter-spacing:0;cursor:pointer;text-decoration:underline dotted" title="Klicken um Tacho-Stand manuell zu korrigieren">— aktuell: ?</span></label>
+              <input type="number" id="inputTacho" min="0" step="0.1" placeholder="z.B. 13500">
+            </div>
+            <div class="input-group">
+              <label for="inputDateTacho">Datum</label>
+              <input type="date" id="inputDateTacho">
+            </div>
+          </div>
+          <div style="text-align:center;padding:6px 0;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.15em">— oder —</div>
+          <div class="input-row">
+            <div class="input-group">
+              <label for="inputFreeKm">Freie km (anderes Rad)</label>
+              <input type="number" id="inputFreeKm" min="0.1" step="0.1" placeholder="z.B. 25">
+            </div>
+            <div class="input-group">
+              <label for="inputDateFree">Datum</label>
+              <input type="date" id="inputDateFree">
+            </div>
+          </div>
+        </div>
+        <button class="btn-primary" id="addBtn">+ Hinzufügen</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title"><span class="section-title-accent">&#x203A;</span> Letzte Einträge</div>
+      </div>
+      <div class="entries-card" id="entriesList">
+        <div class="empty">Noch keine Einträge.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHART -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title"><span class="section-title-accent">&#x203A;</span> Letzte 30 Tage</div>
+    </div>
+    <div class="chart-card">
+      <svg id="chart30" viewBox="0 0 900 320" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+  </div>
+
+  <!-- BINGO -->
+  <div id="bingoSection" class="section">
+    <div class="section-header">
+      <div class="section-title" id="bingoTitle"><span class="section-title-accent">&#x203A;</span> Zahlen-Bingo 1&ndash;100 <span id="bingoCount" style="color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:14px;margin-left:8px;">0 / 100</span></div>
+    </div>
+    <div class="bingo-card">
+      <div class="bingo-badge-row">
+        <div class="bingo-badge" id="bingoBadge" title="Vollständige Bingo-Runden">
+          <div class="bingo-badge-icon">&#x1F3C6;</div>
+          <div class="bingo-badge-info">
+            <div class="bingo-badge-title">Bingo voll gemacht</div>
+            <div class="bingo-badge-desc" id="bingoBadgeDesc">Alle Zahlen von 1 bis 100 getroffen</div>
+          </div>
+          <div class="bingo-badge-counter"><span id="bingoBadgeCount">0</span>&times;</div>
+        </div>
+      </div>
+      <div class="bingo-grid" id="bingoGrid"></div>
+    </div>
+  </div>
+
+  <!-- BADGES -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title"><span class="section-title-accent">&#x203A;</span> Badges <span id="badgeCount" style="color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:14px;margin-left:8px;">0 / 0</span></div>
+    </div>
+    <div id="badgesContainer"></div>
+  </div>
+
+  <div class="footer">
+    <div id="footerLabel">Fitness Tracker &middot; Local Storage</div>
+    <button id="exportBtn">Export JSON</button>
+    <button id="importBtn">Import JSON</button>
+    <input type="file" id="importFile" accept="application/json" style="display:none">
+    <button id="resetBtn">Reset</button>
+  </div>
+
+</div>
+
+<div class="toast" id="toast">
+  <div class="toast-label" id="toastLabel">Badge freigeschaltet</div>
+  <div class="toast-title" id="toastTitle">&mdash;</div>
+  <div class="toast-desc" id="toastDesc">&mdash;</div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// ============================================================
+// TRACKER CONFIGURATIONS
+// ============================================================
+const TRACKERS = {
+  pushups: {
+    key: 'pushups',
+    storageKey: 'pushup_tracker_v1',
+    syncKey: 'pushups',
+    unit: 'Liegestütze',
+    unitShort: 'LS',
+    inputLabel: 'Liegestütze',
+    dailyBaseline: 100,
+    target: 1000000,
+    targetDisplay: '1.000.000',
+    title: 'MISSION <span>1.000.000</span>',
+    offset: 0,
+    step: '1',
+    accent: '#ff6633',
+    accent2: '#ffaa55',
+    yearlyAvg: false,
+    bingo: { type: 'number', min: 1, max: 100, cols: 10 }
+  },
+  pullups: {
+    key: 'pullups',
+    storageKey: 'pullup_tracker_v1',
+    syncKey: 'pullups',
+    unit: 'Klimmzüge',
+    unitShort: 'KZ',
+    inputLabel: 'Klimmzüge',
+    dailyBaseline: 30,
+    target: 300000,
+    targetDisplay: '300.000',
+    title: 'MISSION <span>300.000</span>',
+    offset: 0,
+    step: '1',
+    accent: '#3388ff',
+    accent2: '#55aaff',
+    yearlyAvg: false,
+    bingo: { type: 'number', min: 1, max: 30, cols: 6 }
+  },
+  situps: {
+    key: 'situps',
+    storageKey: 'situp_tracker_v1',
+    syncKey: 'situps',
+    unit: 'Situps',
+    unitShort: 'SU',
+    inputLabel: 'Situps',
+    dailyBaseline: 250,
+    target: 2500000,
+    targetDisplay: '2.500.000',
+    title: 'MISSION <span>2.500.000</span>',
+    offset: 0,
+    step: '1',
+    accent: '#33bb77',
+    accent2: '#55dd99',
+    yearlyAvg: false,
+    bingo: null
+  },
+  cycling: {
+    key: 'cycling',
+    storageKey: 'cycling_tracker_v1',
+    syncKey: 'cycling',
+    unit: 'Kilometer',
+    unitShort: 'km',
+    inputLabel: 'Kilometer',
+    dailyBaseline: 10,
+    target: 100000,
+    targetDisplay: '100.000 KM',
+    title: 'MISSION <span>100.000 KM</span>',
+    offset: 13363,
+    step: '0.1',
+    accent: '#ffcc33',
+    accent2: '#ffdd66',
+    yearlyAvg: false,
+    bingo: { type: 'range', ranges: (function(){ const r = [{label:'0–5',min:0,max:5}]; for(let i=1;i<=39;i++) r.push({label:`${i*5+1}–${(i+1)*5}`,min:i*5+1,max:(i+1)*5}); r.push({label:'200+',min:201,max:Infinity}); return r; })(), cols: 10 }
+  },
+  swimming: {
+    key: 'swimming',
+    storageKey: 'swimming_tracker_v2',
+    syncKey: 'swimming',
+    unit: 'Kilometer',
+    unitShort: 'km',
+    inputLabel: 'Meter',
+    inputMultiplier: 0.001,
+    dailyBaseline: 0.2740,
+    target: 1000,
+    targetDisplay: '1.000 KM',
+    title: 'MISSION <span>1.000 KM</span>',
+    offset: 0,
+    step: '1',
+    accent: '#33bbdd',
+    accent2: '#55ddff',
+    yearlyAvg: true,
+    bingo: null
+  },
+  steps: {
+    key: 'steps',
+    storageKey: 'steps_tracker_v1',
+    syncKey: 'steps',
+    unit: 'Schritte',
+    unitShort: 'ST',
+    inputLabel: 'Schritte',
+    dailyBaseline: 10000,
+    target: 100000000,
+    targetDisplay: '100.000.000',
+    title: 'MISSION <span>100.000.000</span>',
+    offset: 0,
+    step: '1',
+    accent: '#aa55ff',
+    accent2: '#cc88ff',
+    yearlyAvg: false,
+    bingo: null
+  }
+};
+
+// ============================================================
+// BADGE FACTORY FUNCTIONS
+// ============================================================
+function mkTotal(milestones, unit, offset) {
+  const tgt = TRACKERS[Object.keys(TRACKERS).find(k => TRACKERS[k].unit === unit || k === unit)]?.target || milestones[milestones.length-1];
+  return milestones.map(n => ({
+    id:'total_'+n, cat:'total', icon:'🎯',
+    title: n >= tgt ? 'Mission Erfüllt' : n.toLocaleString('de-DE')+' Total',
+    desc: n.toLocaleString('de-DE')+' '+unit+' insgesamt',
+    target: n,
+    getProgress: s => Math.min(n, s.total + (offset||0))
+  }));
+}
+
+function mkDay(milestones, unit) {
+  return milestones.map(n => ({
+    id:'day_'+n, cat:'day', icon:'💪',
+    title: n.toLocaleString('de-DE')+' an einem Tag',
+    desc: n.toLocaleString('de-DE')+' '+unit+' an einem einzigen Tag',
+    target: n,
+    getProgress: s => Math.min(n, s.bestDay)
+  }));
+}
+
+function mkSet(milestones, unit) {
+  return milestones.map(n => ({
+    id:'set_'+n, cat:'set', icon:'🎯',
+    title: n.toLocaleString('de-DE')+' am Stück',
+    desc: n.toLocaleString('de-DE')+' '+unit+' in einer einzigen Einheit',
+    target: n,
+    getProgress: s => Math.min(n, s.bestSet)
+  }));
+}
+
+function mkStreak(milestones) {
+  return milestones.map(n => ({
+    id:'streak_'+n, cat:'streak', icon:'🔥',
+    title: n+'-Tage-Streak',
+    desc: n+' Tage in Folge mit mind. einem Eintrag',
+    target: n,
+    getProgress: s => Math.min(n, s.bestStreak),
+    getDisplayProgress: s => Math.min(n, s.currentStreak)
+  }));
+}
+
+function mkCons(thresholds) {
+  return thresholds.map(t => ({
+    id:'cons_'+t.days+'_'+t.min, cat:'cons', icon:'⚡',
+    title: t.title,
+    desc: t.desc,
+    target: t.days,
+    getProgress: s => Math.min(t.days, s.bestConsistency[t.min]||0),
+    getDisplayProgress: s => Math.min(t.days, s.currentConsistency[t.min]||0)
+  }));
+}
+
+function mkSpecial(specs) {
+  return specs.map(sp => {
+    const b = {id: sp.id, cat:'special', icon: sp.icon, title: sp.title, desc: sp.desc, target: sp.target, getProgress: sp.getProgress};
+    if (sp.customProgressText) b.customProgressText = sp.customProgressText;
+    if (sp.getDisplayProgress) b.getDisplayProgress = sp.getDisplayProgress;
+    return b;
+  });
+}
+
+// ============================================================
+// BADGE DEFINITIONS PER TRACKER
+// ============================================================
+const BADGES_BY_TRACKER = {};
+
+// --- PUSHUPS (55 badges) ---
+BADGES_BY_TRACKER.pushups = [
+  ...mkTotal([100,500,1000,5000,10000,25000,50000,100000,250000,500000,750000,1000000], 'Liegestütze', 0),
+  ...mkDay([100,200,300,400,500,600,700,800,900,1000,1111], 'Liegestütze'),
+  ...mkSet([25,30,50,60,70,80,90,100], 'Liegestütze'),
+  ...mkStreak([3,7,14,30,60,100,200,365]),
+  ...mkCons([
+    {days:7,min:50,title:'Solide Woche',desc:'7 Tage in Folge mit mind. 50 LS'},
+    {days:7,min:100,title:'Starke Woche',desc:'7 Tage in Folge mit mind. 100 LS'},
+    {days:14,min:50,title:'Zwei Wochen Disziplin',desc:'14 Tage in Folge mit mind. 50 LS'},
+    {days:14,min:100,title:'Zwei Wochen Stahl',desc:'14 Tage in Folge mit mind. 100 LS'},
+    {days:30,min:50,title:'Monat der Wahrheit',desc:'30 Tage in Folge mit mind. 50 LS'},
+    {days:30,min:100,title:'Eiserner Monat',desc:'30 Tage in Folge mit mind. 100 LS'},
+    {days:100,min:100,title:'Maschine',desc:'100 Tage in Folge mit mind. 100 LS'}
+  ]),
+  ...mkSpecial([
+    {id:'sp_first',icon:'🚀',title:'Erster Schritt',desc:'Allererster Eintrag',target:1,getProgress:s=>s.entries>0?1:0},
+    {id:'sp_3k30',icon:'📅',title:'Monatsziel',desc:'3.000+ LS in 30 Tagen',target:3000,getProgress:s=>Math.min(3000,s.bestWindow[30]||0)},
+    {id:'sp_10k30',icon:'📅',title:'Großer Monat',desc:'10.000+ LS in 30 Tagen',target:10000,getProgress:s=>Math.min(10000,s.bestWindow[30]||0)},
+    {id:'sp_25k90',icon:'🗓️',title:'Quartal',desc:'25.000+ LS in 90 Tagen',target:25000,getProgress:s=>Math.min(25000,s.bestWindow[90]||0)},
+    {id:'sp_100k365',icon:'🏅',title:'Jahresleistung',desc:'100.000+ LS in 365 Tagen',target:100000,getProgress:s=>Math.min(100000,s.bestWindow[365]||0)},
+    {id:'sp_10k10',icon:'🏃',title:'Solider Lauf',desc:'10.000+ LS in 10 Tagen',target:10000,getProgress:s=>Math.min(10000,s.bestWindow[10]||0)},
+    {id:'sp_calendar',icon:'🗓️',title:'Kalender-Komplettist',desc:'An jedem der 365 Kalendertage mind. 1x trainiert',target:365,getProgress:s=>Math.min(365,s.uniqueCalendarDays)},
+    {id:'sp_track',icon:'🎯',title:'On Track',desc:'Tagesdurchschnitt von 100+ LS',target:100,getProgress:s=>Math.min(100,Math.round(s.dailyAvg)),customProgressText:s=>`${Math.round(s.dailyAvg)} / 100 LS Ø/Tag`},
+    {id:'sp_speed',icon:'⚡',title:'Speedrun',desc:'Tagesdurchschnitt von 250+ LS',target:250,getProgress:s=>Math.min(250,Math.round(s.dailyAvg)),customProgressText:s=>`${Math.round(s.dailyAvg)} / 250 LS Ø/Tag`},
+    {id:'sp_endgame',icon:'🏁',title:'Endspurt',desc:'Letzte 100.000 bis zur Million',target:100000,getProgress:s=>Math.max(0,Math.min(100000,s.total-900000))}
+  ])
+];
+
+// --- PULLUPS ---
+BADGES_BY_TRACKER.pullups = [
+  ...mkTotal([30,150,300,1500,3000,7500,15000,30000,75000,150000,225000,300000], 'Klimmzüge', 0),
+  ...mkDay([30,60,90,120,150,200,250,300], 'Klimmzüge'),
+  ...mkSet([5,10,15,20,25,30,40,50], 'Klimmzüge'),
+  ...mkStreak([3,7,14,30,60,100,200,365]),
+  ...mkCons([
+    {days:7,min:15,title:'Solide Woche',desc:'7 Tage in Folge mit mind. 15 KZ'},
+    {days:7,min:30,title:'Starke Woche',desc:'7 Tage in Folge mit mind. 30 KZ'},
+    {days:14,min:15,title:'Zwei Wochen Disziplin',desc:'14 Tage in Folge mit mind. 15 KZ'},
+    {days:14,min:30,title:'Zwei Wochen Stahl',desc:'14 Tage in Folge mit mind. 30 KZ'},
+    {days:30,min:15,title:'Monat der Wahrheit',desc:'30 Tage in Folge mit mind. 15 KZ'},
+    {days:30,min:30,title:'Eiserner Monat',desc:'30 Tage in Folge mit mind. 30 KZ'},
+    {days:100,min:30,title:'Maschine',desc:'100 Tage in Folge mit mind. 30 KZ'}
+  ]),
+  ...mkSpecial([
+    {id:'sp_first',icon:'🚀',title:'Erster Schritt',desc:'Allererster Eintrag',target:1,getProgress:s=>s.entries>0?1:0},
+    {id:'sp_900_30',icon:'📅',title:'Monatsziel',desc:'900+ KZ in 30 Tagen',target:900,getProgress:s=>Math.min(900,s.bestWindow[30]||0)},
+    {id:'sp_3k30',icon:'📅',title:'Großer Monat',desc:'3.000+ KZ in 30 Tagen',target:3000,getProgress:s=>Math.min(3000,s.bestWindow[30]||0)},
+    {id:'sp_7500_90',icon:'🗓️',title:'Quartal',desc:'7.500+ KZ in 90 Tagen',target:7500,getProgress:s=>Math.min(7500,s.bestWindow[90]||0)},
+    {id:'sp_30k365',icon:'🏅',title:'Jahresleistung',desc:'30.000+ KZ in 365 Tagen',target:30000,getProgress:s=>Math.min(30000,s.bestWindow[365]||0)},
+    {id:'sp_3k10',icon:'🏃',title:'Solider Lauf',desc:'3.000+ KZ in 10 Tagen',target:3000,getProgress:s=>Math.min(3000,s.bestWindow[10]||0)},
+    {id:'sp_calendar',icon:'🗓️',title:'Kalender-Komplettist',desc:'An jedem der 365 Kalendertage mind. 1x trainiert',target:365,getProgress:s=>Math.min(365,s.uniqueCalendarDays)},
+    {id:'sp_track',icon:'🎯',title:'On Track',desc:'Tagesdurchschnitt von 30+ KZ',target:30,getProgress:s=>Math.min(30,Math.round(s.dailyAvg)),customProgressText:s=>`${Math.round(s.dailyAvg)} / 30 KZ Ø/Tag`},
+    {id:'sp_speed',icon:'⚡',title:'Speedrun',desc:'Tagesdurchschnitt von 75+ KZ',target:75,getProgress:s=>Math.min(75,Math.round(s.dailyAvg)),customProgressText:s=>`${Math.round(s.dailyAvg)} / 75 KZ Ø/Tag`},
+    {id:'sp_endgame',icon:'🏁',title:'Endspurt',desc:'Letzte 30.000 bis zum Ziel',target:30000,getProgress:s=>Math.max(0,Math.min(30000,s.total-270000))}
+  ])
+];
+
+// --- SITUPS ---
+BADGES_BY_TRACKER.situps = [
+  ...mkTotal([250,1250,2500,12500,25000,62500,125000,250000,625000,1250000,1875000,2500000], 'Situps', 0),
+  ...mkDay([250,500,750,1000,1500,2000,2500,3000], 'Situps'),
+  ...mkSet([50,75,100,125,150,200,250,300], 'Situps'),
+  ...mkStreak([3,7,14,30,60,100,200,365]),
+  ...mkCons([
+    {days:7,min:125,title:'Solide Woche',desc:'7 Tage in Folge mit mind. 125 SU'},
+    {days:7,min:250,title:'Starke Woche',desc:'7 Tage in Folge mit mind. 250 SU'},
+    {days:14,min:125,title:'Zwei Wochen Disziplin',desc:'14 Tage in Folge mit mind. 125 SU'},
+    {days:14,min:250,title:'Zwei Wochen Stahl',desc:'14 Tage in Folge mit mind. 250 SU'},
+    {days:30,min:125,title:'Monat der Wahrheit',desc:'30 Tage in Folge mit mind. 125 SU'},
+    {days:30,min:250,title:'Eiserner Monat',desc:'30 Tage in Folge mit mind. 250 SU'},
+    {days:100,min:250,title:'Maschine',desc:'100 Tage in Folge mit mind. 250 SU'}
+  ]),
+  ...mkSpecial([
+    {id:'sp_first',icon:'🚀',title:'Erster Schritt',desc:'Allererster Eintrag',target:1,getProgress:s=>s.entries>0?1:0},
+    {id:'sp_7500_30',icon:'📅',title:'Monatsziel',desc:'7.500+ SU in 30 Tagen',target:7500,getProgress:s=>Math.min(7500,s.bestWindow[30]||0)},
+    {id:'sp_25k30',icon:'📅',title:'Großer Monat',desc:'25.000+ SU in 30 Tagen',target:25000,getProgress:s=>Math.min(25000,s.bestWindow[30]||0)},
+    {id:'sp_62500_90',icon:'🗓️',title:'Quartal',desc:'62.500+ SU in 90 Tagen',target:62500,getProgress:s=>Math.min(62500,s.bestWindow[90]||0)},
+    {id:'sp_250k365',icon:'🏅',title:'Jahresleistung',desc:'250.000+ SU in 365 Tagen',target:250000,getProgress:s=>Math.min(250000,s.bestWindow[365]||0)},
+    {id:'sp_25k10',icon:'🏃',title:'Solider Lauf',desc:'25.000+ SU in 10 Tagen',target:25000,getProgress:s=>Math.min(25000,s.bestWindow[10]||0)},
+    {id:'sp_calendar',icon:'🗓️',title:'Kalender-Komplettist',desc:'An jedem der 365 Kalendertage mind. 1x trainiert',target:365,getProgress:s=>Math.min(365,s.uniqueCalendarDays)},
+    {id:'sp_track',icon:'🎯',title:'On Track',desc:'Tagesdurchschnitt von 250+ SU',target:250,getProgress:s=>Math.min(250,Math.round(s.dailyAvg)),customProgressText:s=>`${Math.round(s.dailyAvg)} / 250 SU Ø/Tag`},
+    {id:'sp_speed',icon:'⚡',title:'Speedrun',desc:'Tagesdurchschnitt von 625+ SU',target:625,getProgress:s=>Math.min(625,Math.round(s.dailyAvg)),customProgressText:s=>`${Math.round(s.dailyAvg)} / 625 SU Ø/Tag`},
+    {id:'sp_endgame',icon:'🏁',title:'Endspurt',desc:'Letzte 250.000 bis zum Ziel',target:250000,getProgress:s=>Math.max(0,Math.min(250000,s.total-2250000))}
+  ])
+];
+
+// --- CYCLING (distance comparison badges!) ---
+BADGES_BY_TRACKER.cycling = [
+  // Distance comparison total badges
+  ...[
+    {n:100,icon:'🚴',title:'Erste Hundert',desc:'100 km geschafft'},
+    {n:250,icon:'🚴',title:'Köln → Amsterdam',desc:'Entspricht der Strecke Köln-Amsterdam'},
+    {n:500,icon:'🚴',title:'Hamburg → Frankfurt',desc:'Entspricht Hamburg-Frankfurt'},
+    {n:1000,icon:'🚴',title:'Berlin → Paris',desc:'Entspricht der Strecke Berlin-Paris'},
+    {n:2000,icon:'🚴',title:'London → Barcelona',desc:'Entspricht London-Barcelona'},
+    {n:3535,icon:'🚴',title:'Tour de France',desc:'Gesamtstrecke der Tour de France'},
+    {n:5000,icon:'🚴',title:'New York → L.A.',desc:'Entspricht der US-Durchquerung'},
+    {n:7500,icon:'🚴',title:'Peking → Istanbul',desc:'Halbe Seidenstraße'},
+    {n:10000,icon:'🚴',title:'Transsibirische Eisenbahn',desc:'Moskau-Wladiwostok (9.289 km)'},
+    {n:13000,icon:'🚴',title:'Panamericana Nord',desc:'Alaska-Panama (13.000 km)'},
+    {n:15000,icon:'🚴',title:'Nordkap → Kapstadt',desc:'Nord- bis Südspitze Afrikas'},
+    {n:20000,icon:'🌍',title:'Halber Erdumfang',desc:'Die halbe Welt umrundet'},
+    {n:25000,icon:'🌍',title:'Australien-Küste',desc:'Einmal um Australien (25.760 km)'},
+    {n:30000,icon:'🌍',title:'¾ Erdumfang',desc:'Dreiviertel um die Erde'},
+    {n:40075,icon:'🌍',title:'Erdumfang',desc:'Einmal um die Erde am Äquator!'},
+    {n:50000,icon:'🌍',title:'Über den Äquator hinaus',desc:'Mehr als einmal um die Erde'},
+    {n:75000,icon:'🌍',title:'Doppelter Erdumfang',desc:'Fast zweimal um die Erde'},
+    {n:100000,icon:'🌍',title:'Mission Complete',desc:'100.000 km - Wahnsinn!'}
+  ].map(b => ({
+    id:'total_'+b.n, cat:'total', icon:b.icon,
+    title: b.title,
+    desc: b.desc,
+    target: b.n,
+    getProgress: s => Math.min(b.n, s.total + 13363)
+  })),
+  ...mkDay([10,20,30,50,75,100,150,200], 'Kilometer'),
+  ...mkSet([5,10,15,20,30,50,75,100], 'Kilometer'),
+  ...mkStreak([3,7,14,30,60,100,200,365]),
+  ...mkCons([
+    {days:7,min:5,title:'Solide Woche',desc:'7 Tage in Folge mit mind. 5 km'},
+    {days:7,min:10,title:'Starke Woche',desc:'7 Tage in Folge mit mind. 10 km'},
+    {days:14,min:5,title:'Zwei Wochen Disziplin',desc:'14 Tage in Folge mit mind. 5 km'},
+    {days:14,min:10,title:'Zwei Wochen Stahl',desc:'14 Tage in Folge mit mind. 10 km'},
+    {days:30,min:5,title:'Monat der Wahrheit',desc:'30 Tage in Folge mit mind. 5 km'},
+    {days:30,min:10,title:'Eiserner Monat',desc:'30 Tage in Folge mit mind. 10 km'},
+    {days:100,min:10,title:'Maschine',desc:'100 Tage in Folge mit mind. 10 km'}
+  ]),
+  ...mkSpecial([
+    {id:'sp_first',icon:'🚀',title:'Erster Schritt',desc:'Allererster Eintrag',target:1,getProgress:s=>s.entries>0?1:0},
+    {id:'sp_300_30',icon:'📅',title:'Monatsziel',desc:'300+ km in 30 Tagen',target:300,getProgress:s=>Math.min(300,s.bestWindow[30]||0)},
+    {id:'sp_1k30',icon:'📅',title:'Großer Monat',desc:'1.000+ km in 30 Tagen',target:1000,getProgress:s=>Math.min(1000,s.bestWindow[30]||0)},
+    {id:'sp_2500_90',icon:'🗓️',title:'Quartal',desc:'2.500+ km in 90 Tagen',target:2500,getProgress:s=>Math.min(2500,s.bestWindow[90]||0)},
+    {id:'sp_10k365',icon:'🏅',title:'Jahresleistung',desc:'10.000+ km in 365 Tagen',target:10000,getProgress:s=>Math.min(10000,s.bestWindow[365]||0)},
+    {id:'sp_1k10',icon:'🏃',title:'Solider Lauf',desc:'1.000+ km in 10 Tagen',target:1000,getProgress:s=>Math.min(1000,s.bestWindow[10]||0)},
+    {id:'sp_calendar',icon:'🗓️',title:'Kalender-Komplettist',desc:'An jedem der 365 Kalendertage mind. 1x gefahren',target:365,getProgress:s=>Math.min(365,s.uniqueCalendarDays)},
+    {id:'sp_track',icon:'🎯',title:'On Track',desc:'Tagesdurchschnitt von 10+ km',target:10,getProgress:s=>Math.min(10,Math.round(s.dailyAvg)),customProgressText:s=>`${Math.round(s.dailyAvg)} / 10 km Ø/Tag`},
+    {id:'sp_speed',icon:'⚡',title:'Speedrun',desc:'Tagesdurchschnitt von 25+ km',target:25,getProgress:s=>Math.min(25,Math.round(s.dailyAvg)),customProgressText:s=>`${Math.round(s.dailyAvg)} / 25 km Ø/Tag`},
+    {id:'sp_endgame',icon:'🏁',title:'Endspurt',desc:'Letzte 10.000 km bis zum Ziel',target:10000,getProgress:s=>Math.max(0,Math.min(10000,(s.total+13363)-90000))}
+  ])
+];
+
+// --- SWIMMING (Eingabe in Metern, intern gespeichert in km) ---
+BADGES_BY_TRACKER.swimming = [
+  // Gesamt: km-Meilensteine
+  ...mkTotal([1,5,10,25,50,100,250,500,750,1000], 'Kilometer', 0),
+  // Tagesleistung: km an einem Tag (0.5km=500m, 1km=1000m, etc.)
+  ...[0.5,1,1.5,2,3,5,7.5,10].map(n => ({
+    id:'day_'+n, cat:'day', icon:'💪',
+    title: n < 1 ? `${Math.round(n*1000)} m an einem Tag` : `${n} km an einem Tag`,
+    desc: n < 1 ? `${Math.round(n*1000)} Meter an einem einzigen Tag geschwommen` : `${n} km an einem einzigen Tag geschwommen`,
+    target: n,
+    getProgress: s => Math.min(n, s.bestDay)
+  })),
+  // Bestes Set: km in einer Einheit
+  ...[0.1,0.2,0.5,1,1.5,2,3,5].map(n => ({
+    id:'set_'+n, cat:'set', icon:'🎯',
+    title: n < 1 ? `${Math.round(n*1000)} m am Stück` : `${n} km am Stück`,
+    desc: n < 1 ? `${Math.round(n*1000)} Meter in einer einzigen Einheit` : `${n} km in einer einzigen Einheit`,
+    target: n,
+    getProgress: s => Math.min(n, s.bestSet)
+  })),
+  ...mkStreak([2,3,5,7,14,21,30]),
+  ...mkCons([
+    {days:3,min:0.1,title:'3-Tage-Disziplin',desc:'3 Tage in Folge mit mind. 100 m'},
+    {days:5,min:0.1,title:'5-Tage-Disziplin',desc:'5 Tage in Folge mit mind. 100 m'},
+    {days:7,min:0.1,title:'Solide Woche',desc:'7 Tage in Folge mit mind. 100 m'},
+    {days:7,min:0.5,title:'Starke Woche',desc:'7 Tage in Folge mit mind. 500 m'},
+    {days:14,min:0.1,title:'Zwei Wochen Disziplin',desc:'14 Tage in Folge mit mind. 100 m'},
+    {days:30,min:0.1,title:'Eiserner Monat',desc:'30 Tage in Folge mit mind. 100 m'}
+  ]),
+  ...mkSpecial([
+    {id:'sp_first',icon:'🚀',title:'Erster Schritt',desc:'Allererster Eintrag',target:1,getProgress:s=>s.entries>0?1:0},
+    {id:'sp_10_30',icon:'📅',title:'Monatsziel',desc:'10+ km in 30 Tagen',target:10,getProgress:s=>Math.min(10,s.bestWindow[30]||0)},
+    {id:'sp_30_30',icon:'📅',title:'Großer Monat',desc:'30+ km in 30 Tagen',target:30,getProgress:s=>Math.min(30,s.bestWindow[30]||0)},
+    {id:'sp_25_90',icon:'🗓️',title:'Quartal',desc:'75+ km in 90 Tagen',target:75,getProgress:s=>Math.min(75,s.bestWindow[90]||0)},
+    {id:'sp_100_365',icon:'🏅',title:'Jahresleistung',desc:'100+ km in 365 Tagen',target:100,getProgress:s=>Math.min(100,s.bestWindow[365]||0)},
+    {id:'sp_5_7',icon:'🏃',title:'Solider Lauf',desc:'5+ km in 7 Tagen',target:5,getProgress:s=>Math.min(5,s.bestWindow[7]||0)},
+    {id:'sp_calendar',icon:'🗓️',title:'Kalender-Komplettist',desc:'An jedem der 365 Kalendertage mind. 1x geschwommen',target:365,getProgress:s=>Math.min(365,s.uniqueCalendarDays)},
+    {id:'sp_track',icon:'🎯',title:'On Track',desc:'Jahres-Ø von 100+ km',target:100,getProgress:s=>Math.min(100,Math.round(s.dailyAvg*365)),customProgressText:s=>`${Math.round(s.dailyAvg*365)} / 100 km Jahres-Ø`},
+    {id:'sp_endgame',icon:'🏁',title:'Endspurt',desc:'Letzte 100 km bis zum Ziel',target:100,getProgress:s=>Math.max(0,Math.min(100,s.total-900))}
+  ])
+];
+
+// --- STEPS ---
+BADGES_BY_TRACKER.steps = [
+  ...mkTotal([10000,50000,100000,500000,1000000,5000000,10000000,25000000,50000000,75000000,100000000], 'Schritte', 0),
+  ...mkDay([10000,15000,20000,25000,30000,40000,50000,75000,100000], 'Schritte'),
+  ...mkSet([5000,10000,15000,20000,25000,30000,50000], 'Schritte'),
+  ...mkStreak([3,7,14,30,60,100,200,365]),
+  ...mkCons([
+    {days:7,min:8000,title:'Solide Woche',desc:'7 Tage in Folge mit mind. 8.000 ST'},
+    {days:7,min:10000,title:'Starke Woche',desc:'7 Tage in Folge mit mind. 10.000 ST'},
+    {days:14,min:8000,title:'Zwei Wochen Disziplin',desc:'14 Tage in Folge mit mind. 8.000 ST'},
+    {days:14,min:10000,title:'Zwei Wochen Stahl',desc:'14 Tage in Folge mit mind. 10.000 ST'},
+    {days:30,min:8000,title:'Monat der Wahrheit',desc:'30 Tage in Folge mit mind. 8.000 ST'},
+    {days:30,min:10000,title:'Eiserner Monat',desc:'30 Tage in Folge mit mind. 10.000 ST'},
+    {days:100,min:10000,title:'Maschine',desc:'100 Tage in Folge mit mind. 10.000 ST'}
+  ]),
+  ...mkSpecial([
+    {id:'sp_first',icon:'🚀',title:'Erster Schritt',desc:'Allererster Eintrag',target:1,getProgress:s=>s.entries>0?1:0},
+    {id:'sp_300k30',icon:'📅',title:'Monatsziel',desc:'300.000+ ST in 30 Tagen',target:300000,getProgress:s=>Math.min(300000,s.bestWindow[30]||0)},
+    {id:'sp_1m30',icon:'📅',title:'Großer Monat',desc:'1.000.000+ ST in 30 Tagen',target:1000000,getProgress:s=>Math.min(1000000,s.bestWindow[30]||0)},
+    {id:'sp_2500k90',icon:'🗓️',title:'Quartal',desc:'2.500.000+ ST in 90 Tagen',target:2500000,getProgress:s=>Math.min(2500000,s.bestWindow[90]||0)},
+    {id:'sp_10m365',icon:'🏅',title:'Jahresleistung',desc:'10.000.000+ ST in 365 Tagen',target:10000000,getProgress:s=>Math.min(10000000,s.bestWindow[365]||0)},
+    {id:'sp_1m10',icon:'🏃',title:'Solider Lauf',desc:'1.000.000+ ST in 10 Tagen',target:1000000,getProgress:s=>Math.min(1000000,s.bestWindow[10]||0)},
+    {id:'sp_calendar',icon:'🗓️',title:'Kalender-Komplettist',desc:'An jedem der 365 Kalendertage mind. 1x gelaufen',target:365,getProgress:s=>Math.min(365,s.uniqueCalendarDays)},
+    {id:'sp_track',icon:'🎯',title:'On Track',desc:'Tagesdurchschnitt von 10.000+ ST',target:10000,getProgress:s=>Math.min(10000,Math.round(s.dailyAvg)),customProgressText:s=>`${Math.round(s.dailyAvg).toLocaleString('de-DE')} / 10.000 ST Ø/Tag`},
+    {id:'sp_speed',icon:'⚡',title:'Speedrun',desc:'Tagesdurchschnitt von 25.000+ ST',target:25000,getProgress:s=>Math.min(25000,Math.round(s.dailyAvg)),customProgressText:s=>`${Math.round(s.dailyAvg).toLocaleString('de-DE')} / 25.000 ST Ø/Tag`},
+    {id:'sp_endgame',icon:'🏁',title:'Endspurt',desc:'Letzte 10 Mio bis zum Ziel',target:10000000,getProgress:s=>Math.max(0,Math.min(10000000,s.total-90000000))}
+  ])
+];
+
+const CATEGORIES = [
+  {key:'total', label:'🎯 Gesamtzahl'},
+  {key:'day', label:'💪 Tagesleistung'},
+  {key:'set', label:'🎯 Bestes Set'},
+  {key:'streak', label:'🔥 Streaks'},
+  {key:'cons', label:'⚡ Konsistenz'},
+  {key:'special', label:'🏆 Special'},
+];
+
+// ============================================================
+// STATE MANAGEMENT
+// ============================================================
+let activeTracker = 'pushups';
+let states = {};
+
+function defaultState() {
+  return {
+    startDate: null,
+    entries: [],
+    badges: {},
+    bingoCompletedRounds: 0,
+    bingoStartTs: 0,
+    updatedAt: 0
+  };
+}
+
+function loadState(key) {
+  const tk = TRACKERS[key];
+  try {
+    const raw = localStorage.getItem(tk.storageKey);
+    if (raw) {
+      const s = JSON.parse(raw);
+      if (!s.entries) s.entries = [];
+      if (!s.badges) s.badges = {};
+      if (s.bingoCompletedRounds == null) s.bingoCompletedRounds = 0;
+      if (s.bingoStartTs == null) s.bingoStartTs = 0;
+      states[key] = s;
+      if (key === 'cycling') {
+        // Always recalculate lastTachoStand from entries to prevent stale values
+        const offset = TRACKERS.cycling.offset;
+        let tachoSum = 0;
+        s.entries.forEach(e => { if (e.source !== 'free') tachoSum += e.count; });
+        s.lastTachoStand = offset + Math.round(tachoSum * 10) / 10;
+      }
+    } else {
+      states[key] = defaultState();
+      if (key === 'cycling') states[key].lastTachoStand = 13363;
+    }
+  } catch(e) {
+    console.warn('Load failed for', key, e);
+    states[key] = defaultState();
+  }
+}
+
+function saveState(key) {
+  const tk = TRACKERS[key];
+  states[key].updatedAt = Date.now();
+  try {
+    localStorage.setItem(tk.storageKey, JSON.stringify(states[key]));
+  } catch (e) {
+    console.error('localStorage write failed for', key, e);
+    alert('Speicherfehler! Daten konnten nicht lokal gespeichert werden. Bitte Browser-Cache leeren.');
+  }
+  scheduleCloudPush(key);
+}
+
+function getState() { return states[activeTracker]; }
+function getConfig() { return TRACKERS[activeTracker]; }
+function getBadges() { return BADGES_BY_TRACKER[activeTracker]; }
+
+// URL parameter ?reset=1 clears all tracker localStorage for a clean cloud pull
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get('reset') === '1') {
+  for (const key of Object.keys(TRACKERS)) {
+    localStorage.removeItem(TRACKERS[key].storageKey);
+  }
+  // Keep firebase-url and sync-code so cloud pull still works
+  // Remove ?reset=1 from URL so it doesn't reset on every reload
+  const cleanUrl = window.location.pathname;
+  window.history.replaceState({}, '', cleanUrl);
+}
+
+// Load all states on init
+for (const key of Object.keys(TRACKERS)) loadState(key);
+
+// ============================================================
+// FIREBASE SYNC
+// ============================================================
+let firebaseUrl = localStorage.getItem('firebase-url') || '';
+let syncCode = localStorage.getItem('sync-code') || '';
+let pushTimeouts = {};
+let initialSyncDone = false; // Block pushes until first pull completes
+
+function setSyncStatus(status, text) {
+  const dot = document.getElementById('syncDot');
+  const txt = document.getElementById('syncText');
+  dot.className = 'sync-dot' + (status ? ' ' + status : '');
+  txt.textContent = text;
+}
+
+function generateSyncCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
+async function pushToCloud(key) {
+  if (!firebaseUrl || !syncCode) return;
+  const tk = TRACKERS[key];
+  const localEntries = states[key].entries || [];
+  // PROTECTION: if local has no entries, check cloud first before overwriting
+  if (localEntries.length === 0) {
+    try {
+      const checkRes = await fetch(`${firebaseUrl}/tracker/${syncCode}/${tk.syncKey}.json`);
+      if (checkRes.ok) {
+        const checkText = await checkRes.text();
+        try {
+          const cloudCheck = JSON.parse(checkText);
+          if (cloudCheck && (cloudCheck.entries || []).length > 0) {
+            console.warn('PUSH BLOCKED for', key, ': local empty but cloud has', cloudCheck.entries.length, 'entries');
+            return; // Never overwrite populated cloud with empty local
+          }
+        } catch(e) { /* parse fail, safe to push */ }
+      }
+    } catch(e) { /* network fail, skip protection check */ }
+  }
+  try {
+    setSyncStatus('syncing', 'Sync...');
+    const res = await fetch(`${firebaseUrl}/tracker/${syncCode}/${tk.syncKey}.json`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(states[key])
+    });
+    if (!res.ok) {
+      setSyncStatus('error', key + ': Server ' + res.status);
+      return;
+    }
+    setSyncStatus('online', 'Synced');
+  } catch (e) {
+    console.error('Cloud push failed for', key, e);
+    setSyncStatus('error', key + ': ' + (e.message || 'Push-Fehler').substring(0, 25));
+  }
+}
+
+function scheduleCloudPush(key) {
+  if (!firebaseUrl || !syncCode) return;
+  if (!initialSyncDone) return; // Don't push before first pull completes
+  clearTimeout(pushTimeouts[key]);
+  pushTimeouts[key] = setTimeout(() => pushToCloud(key), 800);
+}
+
+async function pullFromCloudAll() {
+  if (!firebaseUrl || !syncCode) return;
+  try {
+    setSyncStatus('syncing', 'Lade...');
+    let anyChanged = false;
+    let loadedCount = 0;
+    let errorLog = [];
+    let debugLog = [];
+
+    // Pull each tracker individually to avoid large response issues on mobile
+    for (const key of Object.keys(TRACKERS)) {
+      const tk = TRACKERS[key];
+      try {
+        const res = await fetch(`${firebaseUrl}/tracker/${syncCode}/${tk.syncKey}.json`);
+        if (!res.ok) { errorLog.push(key + ':HTTP' + res.status); debugLog.push(key + ':HTTP' + res.status); continue; }
+        const text = await res.text();
+        let cloudState;
+        try { cloudState = JSON.parse(text); } catch(e) { errorLog.push(key + ':parseErr'); debugLog.push(key + ':parseErr:' + text.substring(0, 30)); continue; }
+        if (!cloudState) {
+          debugLog.push(key + ':null(' + text.length + 'b)');
+          if (states[key].entries && states[key].entries.length > 0) {
+            await pushToCloud(key);
+          }
+          continue;
+        }
+
+        // Firebase sometimes returns arrays as objects — convert if needed
+        let cloudEntriesRaw = cloudState.entries;
+        if (cloudEntriesRaw && !Array.isArray(cloudEntriesRaw)) {
+          cloudEntriesRaw = Object.values(cloudEntriesRaw);
+        }
+        const cloudEntries = cloudEntriesRaw || [];
+        const localEntries = states[key].entries || [];
+        debugLog.push(key + ':cloud=' + cloudEntries.length + ',local=' + localEntries.length + ',bytes=' + text.length);
+        const cloudUpdatedAt = cloudState.updatedAt || 0;
+        const localUpdatedAt = states[key].updatedAt || 0;
+
+        // Protection: never overwrite local data with empty cloud state
+        if (cloudEntries.length === 0 && localEntries.length > 0) {
+          await pushToCloud(key);
+          continue;
+        }
+
+        // Cloud has more data than local — take cloud state
+        // This covers: fresh device, reset device, corrupted local state
+        if (cloudEntries.length > localEntries.length && cloudEntries.length > 0) {
+          states[key] = Object.assign({}, cloudState);
+          if (!states[key].entries) states[key].entries = [];
+          if (!states[key].badges) states[key].badges = {};
+          if (states[key].bingoCompletedRounds == null) states[key].bingoCompletedRounds = 0;
+          if (states[key].bingoStartTs == null) states[key].bingoStartTs = 0;
+          if (key === 'cycling') {
+            const offset = TRACKERS.cycling.offset;
+            let tachoSum = 0;
+            states[key].entries.forEach(e => { if (e.source !== 'free') tachoSum += e.count; });
+            states[key].lastTachoStand = offset + Math.round(tachoSum * 10) / 10;
+          }
+          localStorage.setItem(tk.storageKey, JSON.stringify(states[key]));
+          anyChanged = true;
+          loadedCount++;
+          continue;
+        }
+
+        // Merge strategy: combine entries by unique ID
+        if (cloudUpdatedAt !== localUpdatedAt && (cloudEntries.length > 0 || localEntries.length > 0)) {
+          const localById = new Map(localEntries.map(e => [e.id, e]));
+          let merged = [];
+          for (const e of localEntries) merged.push(e);
+          for (const e of cloudEntries) {
+            if (!localById.has(e.id)) merged.push(e);
+          }
+          if (localUpdatedAt > cloudUpdatedAt) {
+            const keepIds = new Set(localEntries.map(e => e.id));
+            for (const e of cloudEntries) {
+              if (!keepIds.has(e.id) && (e.ts || 0) > localUpdatedAt) keepIds.add(e.id);
+            }
+            merged = merged.filter(e => keepIds.has(e.id));
+          }
+          if (cloudUpdatedAt > localUpdatedAt) {
+            const keepIds = new Set(cloudEntries.map(e => e.id));
+            for (const e of localEntries) {
+              if (!keepIds.has(e.id) && (e.ts || 0) > cloudUpdatedAt) keepIds.add(e.id);
+            }
+            merged = merged.filter(e => keepIds.has(e.id));
+          }
+          merged.sort((a, b) => (a.ts || 0) - (b.ts || 0));
+          const mergedBadges = Object.assign({}, states[key].badges || {}, cloudState.badges || {});
+          const newer = cloudUpdatedAt > localUpdatedAt ? cloudState : states[key];
+          states[key] = Object.assign({}, newer, { entries: merged, badges: mergedBadges });
+          if (!states[key].entries) states[key].entries = [];
+          if (!states[key].badges) states[key].badges = {};
+          if (states[key].bingoCompletedRounds == null) states[key].bingoCompletedRounds = 0;
+          if (states[key].bingoStartTs == null) states[key].bingoStartTs = 0;
+          if (key === 'cycling') {
+            const offset = TRACKERS.cycling.offset;
+            let tachoSum = 0;
+            states[key].entries.forEach(e => { if (e.source !== 'free') tachoSum += e.count; });
+            states[key].lastTachoStand = offset + Math.round(tachoSum * 10) / 10;
+          }
+          states[key].updatedAt = Math.max(cloudUpdatedAt, localUpdatedAt);
+          localStorage.setItem(tk.storageKey, JSON.stringify(states[key]));
+          await pushToCloud(key);
+          anyChanged = true;
+          loadedCount++;
+        }
+      } catch (trackerErr) {
+        console.error('Pull failed for', key, trackerErr);
+      }
+    }
+
+    if (anyChanged) entriesCollapse = null;
+    render();
+    initialSyncDone = true; // Allow pushes now that pull is complete
+    const statusMsg = loadedCount > 0 ? loadedCount + '/6 geladen' : (errorLog.length > 0 ? errorLog.join(', ') : 'Keine Änderungen');
+    setSyncStatus('online', statusMsg);
+    // Show debug info if ?debug=1 or always for first 30 seconds
+    if (debugLog.length > 0) {
+      const debugEl = document.createElement('div');
+      debugEl.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#000;color:#0f0;font:10px monospace;padding:4px;z-index:9999;max-height:40vh;overflow:auto;';
+      debugEl.textContent = 'SYNC DEBUG: ' + debugLog.join(' | ');
+      document.body.appendChild(debugEl);
+    }
+  } catch (e) {
+    console.error('Cloud pull failed', e);
+    initialSyncDone = true; // Allow pushes even if pull failed (user may want to push)
+    setSyncStatus('error', 'Sync: ' + (e.message || 'Fehler').substring(0, 30));
+  }
+}
+
+let syncInterval = null;
+function startSyncLoop() {
+  if (syncInterval) return;
+  syncInterval = setInterval(pullFromCloudAll, 30000);
+}
+
+function showSyncSetup() {
+  const url = prompt('Firebase Realtime Database URL eingeben:\n(z.B. https://filme-5b578-default-rtdb.europe-west1.firebasedatabase.app)', firebaseUrl);
+  if (!url) return;
+  const code = prompt('Sync-Code eingeben (leer lassen = neuer Code):', syncCode) || generateSyncCode();
+  firebaseUrl = url.replace(/\/+$/, '');
+  syncCode = code.toUpperCase();
+  localStorage.setItem('firebase-url', firebaseUrl);
+  localStorage.setItem('sync-code', syncCode);
+  updateSyncUI();
+  pullFromCloudAll().then(() => startSyncLoop());
+}
+
+function updateSyncUI() {
+  const btn = document.getElementById('authBtn');
+  if (firebaseUrl && syncCode) {
+    btn.innerHTML = '<span>Sync: ' + syncCode + '</span>';
+    btn.title = 'Sync-Code: ' + syncCode + ' (klicken für Einstellungen)';
+    setSyncStatus('online', 'Verbunden');
+  } else {
+    btn.innerHTML = '<span>Sync einrichten</span>';
+    btn.title = 'Klicken um Geräte-Sync einzurichten';
+    setSyncStatus('', 'Offline');
+  }
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function fmtDate(d) {
+  if (typeof d === 'string') d = new Date(d);
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Berlin',
+    year: 'numeric', month: '2-digit', day: '2-digit'
+  }).formatToParts(d);
+  const y = parts.find(p => p.type === 'year').value;
+  const m = parts.find(p => p.type === 'month').value;
+  const day = parts.find(p => p.type === 'day').value;
+  return `${y}-${m}-${day}`;
+}
+function fmtDateDe(iso) {
+  if (!iso) return '—';
+  const [y,m,d] = iso.split('-');
+  return `${d}.${m}.${y}`;
+}
+function todayISO() { return fmtDate(new Date()); }
+function daysBetween(isoA, isoB) {
+  return Math.round((new Date(isoB) - new Date(isoA)) / 86400000);
+}
+function addDays(iso, n) {
+  const d = new Date(iso);
+  d.setDate(d.getDate() + n);
+  return fmtDate(d);
+}
+
+// ============================================================
+// STATS COMPUTATION
+// ============================================================
+function computeStats() {
+  const state = getState();
+  const config = getConfig();
+  const entries = state.entries;
+  const byDate = {};
+  for (const e of entries) {
+    byDate[e.date] = (byDate[e.date] || 0) + e.count;
+  }
+
+  const dates = Object.keys(byDate).sort();
+  const total = entries.reduce((s,e)=>s+e.count, 0);
+
+  // Best day
+  let bestDay = 0, bestDayDate = null;
+  for (const d of dates) {
+    if (byDate[d] > bestDay) { bestDay = byDate[d]; bestDayDate = d; }
+  }
+
+  // Best single set
+  let bestSet = 0, bestSetDate = null;
+  for (const e of entries) {
+    if (e.count > bestSet) { bestSet = e.count; bestSetDate = e.date; }
+  }
+
+  // Best week and month (rolling)
+  let bestWeek = 0, bestWeekEnd = null;
+  let bestMonth = 0, bestMonthEnd = null;
+  if (dates.length > 0) {
+    const firstD = dates[0];
+    const lastD = dates[dates.length-1];
+    const span = daysBetween(firstD, lastD) + 1;
+    const arr = new Array(span).fill(0);
+    for (let i=0; i<span; i++) arr[i] = byDate[addDays(firstD, i)] || 0;
+    function rolling(windowSize) {
+      let best = 0, bestEnd = null, sum = 0;
+      for (let i=0; i<arr.length; i++) {
+        sum += arr[i];
+        if (i >= windowSize) sum -= arr[i - windowSize];
+        if (i >= windowSize - 1 && sum > best) { best = sum; bestEnd = addDays(firstD, i); }
+      }
+      if (arr.length < windowSize) {
+        const t = arr.reduce((a,b)=>a+b,0);
+        if (t > best) { best = t; bestEnd = lastD; }
+      }
+      return {best, bestEnd};
+    }
+    ({best: bestWeek, bestEnd: bestWeekEnd} = rolling(7));
+    ({best: bestMonth, bestEnd: bestMonthEnd} = rolling(30));
+  }
+
+  // Streaks
+  let bestStreak = 0, currentStreak = 0;
+  if (dates.length > 0) {
+    let run = 0, prevDate = null;
+    for (const d of dates) {
+      if (prevDate === null || daysBetween(prevDate, d) === 1) run++;
+      else run = 1;
+      if (run > bestStreak) bestStreak = run;
+      prevDate = d;
+    }
+    let cur = 0, cursor = todayISO();
+    if (!byDate[cursor]) cursor = addDays(cursor, -1);
+    while (byDate[cursor]) { cur++; cursor = addDays(cursor, -1); }
+    currentStreak = cur;
+  }
+
+  // Consistency streaks
+  function bestConsistencyFor(threshold) {
+    let best = 0, run = 0, prev = null;
+    for (const d of dates) {
+      if (byDate[d] >= threshold) {
+        if (prev !== null && daysBetween(prev, d) === 1) run++;
+        else run = 1;
+        if (run > best) best = run;
+      } else { run = 0; }
+      prev = d;
+    }
+    return best;
+  }
+  function currentConsistencyFor(threshold) {
+    let cur = 0, cursor = todayISO();
+    if (!(byDate[cursor] >= threshold)) cursor = addDays(cursor, -1);
+    while (byDate[cursor] >= threshold) { cur++; cursor = addDays(cursor, -1); }
+    return cur;
+  }
+
+  // Collect all consistency thresholds used by this tracker's badges
+  const consThresholds = new Set();
+  for (const b of getBadges()) {
+    if (b.cat === 'cons') {
+      // Extract min from the badge definition (supports decimals like 0.1)
+      const match = b.id.match(/cons_\d+_([\d.]+)/);
+      if (match) consThresholds.add(parseFloat(match[1]));
+    }
+  }
+  const bestConsistency = {};
+  const currentConsistency = {};
+  for (const t of consThresholds) {
+    bestConsistency[t] = bestConsistencyFor(t);
+    currentConsistency[t] = currentConsistencyFor(t);
+  }
+
+  // Best window sums
+  const windowSizes = [7, 10, 30, 90, 365];
+  const bestWindow = {};
+  if (dates.length > 0) {
+    const firstD = dates[0];
+    const lastD = dates[dates.length-1];
+    const span = daysBetween(firstD, lastD) + 1;
+    const arr = new Array(span).fill(0);
+    for (let i=0; i<span; i++) arr[i] = byDate[addDays(firstD, i)] || 0;
+    for (const w of windowSizes) {
+      let best = 0, sum = 0;
+      for (let i=0; i<arr.length; i++) {
+        sum += arr[i];
+        if (i >= w) sum -= arr[i - w];
+        if (i >= w - 1 && sum > best) best = sum;
+      }
+      if (arr.length < w) {
+        const t = arr.reduce((a,b)=>a+b,0);
+        if (t > best) best = t;
+      }
+      bestWindow[w] = best;
+    }
+  } else {
+    for (const w of windowSizes) bestWindow[w] = 0;
+  }
+
+  // Unique calendar days
+  const calSet = new Set();
+  for (const d of dates) {
+    const mmdd = d.slice(5);
+    if (mmdd !== '02-29') calSet.add(mmdd);
+  }
+  const uniqueCalendarDays = calSet.size;
+
+  // Predicted finish
+  let predictedFinish = null, predictedYears = null, dailyAvg = 0, daysActiveTotal = 0;
+  const effectiveStart = dates.length > 0 ? dates[0] : (state.startDate || todayISO());
+  const today = todayISO();
+  daysActiveTotal = Math.max(1, daysBetween(effectiveStart, today) + 1);
+
+  const displayTotal = total + config.offset;
+  if (total > 0) {
+    dailyAvg = total / daysActiveTotal;
+    if (displayTotal < config.target) {
+      const remaining = config.target - displayTotal;
+      const daysNeeded = Math.ceil(remaining / dailyAvg);
+      const finish = new Date(today);
+      finish.setDate(finish.getDate() + daysNeeded);
+      predictedFinish = fmtDate(finish);
+      predictedYears = daysNeeded / 365.25;
+    } else {
+      predictedFinish = today;
+      predictedYears = 0;
+    }
+  }
+
+  return {
+    total,
+    bestDay, bestDayDate,
+    bestSet, bestSetDate,
+    bestWeek, bestWeekEnd,
+    bestMonth, bestMonthEnd,
+    bestStreak, currentStreak,
+    bestConsistency, currentConsistency,
+    bestWindow,
+    uniqueCalendarDays,
+    predictedFinish, predictedYears,
+    dailyAvg, daysActiveTotal,
+    entries: entries.length,
+    byDate
+  };
+}
+
+// ============================================================
+// BADGE LOGIC
+// ============================================================
+function checkBadges(stats) {
+  const state = getState();
+  const badges = getBadges();
+  const newlyUnlocked = [];
+  const revoked = [];
+  for (const b of badges) {
+    const prog = b.getProgress(stats);
+    const meets = prog >= b.target;
+    const has = !!state.badges[b.id];
+    if (meets && !has) {
+      state.badges[b.id] = todayISO();
+      newlyUnlocked.push(b);
+    } else if (!meets && has) {
+      delete state.badges[b.id];
+      revoked.push(b);
+    }
+  }
+  return {newlyUnlocked, revoked};
+}
+
+let toastQueue = [];
+let toastShowing = false;
+function showToast(badge, type) {
+  toastQueue.push({badge, type: type||'unlock'});
+  if (!toastShowing) processToastQueue();
+}
+function processToastQueue() {
+  if (toastQueue.length === 0) { toastShowing = false; return; }
+  toastShowing = true;
+  const {badge: b, type} = toastQueue.shift();
+  const t = document.getElementById('toast');
+  if (type === 'revoke') {
+    t.classList.add('revoke');
+    document.getElementById('toastLabel').textContent = 'Badge verloren';
+    document.getElementById('toastTitle').textContent = b.icon + ' ' + b.title;
+    document.getElementById('toastDesc').textContent = 'Bedingung nicht mehr erfüllt';
+  } else {
+    t.classList.remove('revoke');
+    document.getElementById('toastLabel').textContent = 'Badge freigeschaltet';
+    document.getElementById('toastTitle').textContent = b.icon + ' ' + b.title;
+    document.getElementById('toastDesc').textContent = b.desc;
+  }
+  t.classList.add('show');
+  setTimeout(() => {
+    t.classList.remove('show');
+    setTimeout(processToastQueue, 400);
+  }, 3500);
+}
+
+// ============================================================
+// TAB SWITCHING
+// ============================================================
+let entriesCollapse = null;
+
+function setAccentColors(config) {
+  const r = document.documentElement.style;
+  r.setProperty('--accent', config.accent);
+  r.setProperty('--accent-2', config.accent2);
+  // Parse accent to rgba for glow
+  const hex = config.accent;
+  const rr = parseInt(hex.slice(1,3),16);
+  const gg = parseInt(hex.slice(3,5),16);
+  const bb = parseInt(hex.slice(5,7),16);
+  r.setProperty('--accent-glow', `rgba(${rr}, ${gg}, ${bb}, 0.4)`);
+}
+
+function switchTab(trackerKey) {
+  if (trackerKey === activeTracker) return;
+  // Save current
+  saveState(activeTracker);
+  activeTracker = trackerKey;
+  entriesCollapse = null;
+  const config = getConfig();
+
+  // Update accent colors
+  setAccentColors(config);
+
+  // Update tab bar active state
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.tracker === trackerKey);
+  });
+
+  // Update brand title
+  document.getElementById('brandTitle').innerHTML = config.title;
+
+  // Update input: cycling vs standard
+  if (config.key === 'cycling') {
+    document.getElementById('inputStandard').style.display = 'none';
+    document.getElementById('inputCycling').style.display = '';
+    document.getElementById('inputTacho').value = '';
+    document.getElementById('inputFreeKm').value = '';
+    document.getElementById('inputDateTacho').value = todayISO();
+    document.getElementById('inputDateFree').value = todayISO();
+    const lts = states.cycling.lastTachoStand || 13363;
+    document.getElementById('tachoHint').textContent = '— aktuell: ' + lts.toLocaleString('de-DE') + ' km';
+  } else {
+    document.getElementById('inputStandard').style.display = '';
+    document.getElementById('inputCycling').style.display = 'none';
+    document.getElementById('inputLabel').textContent = config.inputLabel;
+    const inputCount = document.getElementById('inputCount');
+    inputCount.step = config.step;
+    inputCount.value = '';
+    inputCount.placeholder = 'z. B. 50';
+  }
+  document.getElementById('inputDate').value = todayISO();
+
+  // Update target display
+  document.getElementById('counterTarget').textContent = '/ ' + config.targetDisplay;
+
+  // Update avg label
+  document.getElementById('avgLabel').textContent = config.yearlyAvg ? 'Jahres-Ø' : 'Daily Avg';
+
+  render();
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function render() {
+  const stats = computeStats();
+  const config = getConfig();
+  const state = getState();
+  const displayTotal = stats.total + config.offset;
+
+  // counter — use decimal display for swimming (km) and cycling
+  const useDec = config.inputMultiplier || config.step === '0.1';
+  const fmtHero = (v) => useDec ? v.toLocaleString('de-DE', {minimumFractionDigits:1, maximumFractionDigits:1}) : v.toLocaleString('de-DE');
+  document.getElementById('counterCurrent').textContent = fmtHero(displayTotal);
+  const pct = (displayTotal / config.target) * 100;
+  document.getElementById('counterPercent').textContent = pct.toFixed(3) + '%';
+  document.getElementById('progressFill').style.width = Math.min(100, pct) + '%';
+
+  // hero stats
+  document.getElementById('predictedFinish').textContent = stats.predictedFinish ? fmtDateDe(stats.predictedFinish) : '—';
+  document.getElementById('predictedYears').textContent = stats.predictedYears != null
+    ? (stats.predictedYears < 0.1 ? 'Erreicht!' : `~${stats.predictedYears.toFixed(1)} Jahre`)
+    : 'Noch keine Daten';
+
+  // Daily Avg or Jahres-Ø
+  if (config.yearlyAvg) {
+    const yearlyKm = stats.dailyAvg * 365;
+    document.getElementById('dailyAvg').textContent = yearlyKm.toLocaleString('de-DE', {minimumFractionDigits:1, maximumFractionDigits:1}) + ' km';
+  } else {
+    document.getElementById('dailyAvg').textContent = Math.round(stats.dailyAvg).toLocaleString('de-DE');
+  }
+  document.getElementById('daysActive').textContent = stats.daysActiveTotal + ' Tage seit Start';
+
+  document.getElementById('currentStreak').textContent = stats.currentStreak;
+  document.getElementById('recordDay').textContent = fmtHero(stats.bestDay);
+  document.getElementById('recordDayDate').textContent = stats.bestDayDate ? fmtDateDe(stats.bestDayDate) : '—';
+  document.getElementById('recordSet').textContent = fmtHero(stats.bestSet);
+  document.getElementById('recordSetDate').textContent = stats.bestSetDate ? fmtDateDe(stats.bestSetDate) : '—';
+  document.getElementById('recordWeek').textContent = fmtHero(stats.bestWeek);
+  document.getElementById('recordWeekDate').textContent = stats.bestWeekEnd ? 'bis ' + fmtDateDe(stats.bestWeekEnd) : '—';
+  document.getElementById('recordMonth').textContent = fmtHero(stats.bestMonth);
+  document.getElementById('recordMonthDate').textContent = stats.bestMonthEnd ? 'bis ' + fmtDateDe(stats.bestMonthEnd) : '—';
+
+  document.getElementById('todayLabel').textContent = 'Heute · ' + fmtDateDe(todayISO());
+
+  renderEntries();
+  renderChart(stats);
+  renderBingo();
+  renderBadges(stats);
+}
+
+function renderBingo() {
+  const config = getConfig();
+  const bingoSection = document.getElementById('bingoSection');
+  const bingoCfg = config.bingo;
+
+  if (!bingoCfg) {
+    bingoSection.style.display = 'none';
+    return;
+  }
+  bingoSection.style.display = '';
+
+  const grid = document.getElementById('bingoGrid');
+  const state = getState();
+  if (state.bingoCompletedRounds == null) state.bingoCompletedRounds = 0;
+  if (state.bingoStartTs == null) state.bingoStartTs = 0;
+
+  let totalCells, hits, html = '', titleText, badgeDesc;
+
+  if (bingoCfg.type === 'number') {
+    totalCells = bingoCfg.max - bingoCfg.min + 1;
+    hits = new Set();
+    for (const e of state.entries) {
+      const v = Math.floor(e.count);
+      if (v >= bingoCfg.min && v <= bingoCfg.max && (e.ts || 0) > state.bingoStartTs) {
+        hits.add(v);
+      }
+    }
+    if (hits.size === totalCells) {
+      state.bingoCompletedRounds++;
+      state.bingoStartTs = Date.now();
+      hits.clear();
+      saveState(activeTracker);
+      showBingoToast();
+    }
+    for (let n = bingoCfg.min; n <= bingoCfg.max; n++) {
+      html += `<div class="bingo-cell ${hits.has(n) ? 'hit' : ''}">${n}</div>`;
+    }
+    titleText = `<span class="section-title-accent">›</span> Zahlen-Bingo ${bingoCfg.min}–${bingoCfg.max}`;
+    badgeDesc = `Alle Zahlen von ${bingoCfg.min} bis ${bingoCfg.max} getroffen`;
+  } else if (bingoCfg.type === 'range') {
+    const ranges = bingoCfg.ranges;
+    totalCells = ranges.length;
+    hits = new Set();
+    for (const e of state.entries) {
+      if ((e.ts || 0) <= state.bingoStartTs) continue;
+      const v = Math.floor(e.count);
+      for (let ri = 0; ri < ranges.length; ri++) {
+        if (v >= ranges[ri].min && v <= ranges[ri].max) {
+          hits.add(ri);
+        }
+      }
+    }
+    if (hits.size === totalCells) {
+      state.bingoCompletedRounds++;
+      state.bingoStartTs = Date.now();
+      hits.clear();
+      saveState(activeTracker);
+      showBingoToast();
+    }
+    for (let ri = 0; ri < ranges.length; ri++) {
+      html += `<div class="bingo-cell ${hits.has(ri) ? 'hit' : ''}" style="aspect-ratio:auto;padding:6px 2px;font-size:11px">${ranges[ri].label}</div>`;
+    }
+    titleText = `<span class="section-title-accent">›</span> Strecken-Bingo`;
+    badgeDesc = `Alle ${totalCells} Strecken-Bereiche abgedeckt`;
+  }
+
+  const hitCount = hits.size;
+  grid.innerHTML = html;
+  grid.style.gridTemplateColumns = `repeat(${bingoCfg.cols}, 1fr)`;
+  document.getElementById('bingoTitle').innerHTML = `${titleText} <span style="color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:14px;margin-left:8px;">${hitCount} / ${totalCells}</span>`;
+  document.getElementById('bingoBadgeDesc').textContent = badgeDesc;
+  document.getElementById('bingoBadgeCount').textContent = state.bingoCompletedRounds;
+  const bingoBadge = document.getElementById('bingoBadge');
+  if (state.bingoCompletedRounds > 0) bingoBadge.classList.add('has-bingo');
+  else bingoBadge.classList.remove('has-bingo');
+}
+
+function showBingoToast() {
+  const state = getState();
+  showToast({
+    icon: '🏆',
+    title: `Bingo Runde ${state.bingoCompletedRounds} voll!`,
+    desc: 'Alle Zahlen 1-100 getroffen. Neue Runde startet.'
+  }, 'unlock');
+}
+
+function renderEntries() {
+  const c = document.getElementById('entriesList');
+  const state = getState();
+  const config = getConfig();
+  if (state.entries.length === 0) {
+    c.innerHTML = '<div class="empty">Noch keine Einträge.</div>';
+    return;
+  }
+  const groups = {};
+  for (const e of state.entries) {
+    if (!groups[e.date]) groups[e.date] = [];
+    groups[e.date].push(e);
+  }
+  const tree = {};
+  for (const d of Object.keys(groups)) {
+    const [y, m] = d.split('-');
+    if (!tree[y]) tree[y] = {};
+    if (!tree[y][m]) tree[y][m] = {};
+    tree[y][m][d] = {
+      entries: groups[d].sort((a,b)=>b.ts-a.ts),
+      total: groups[d].reduce((s,e)=>s+e.count, 0)
+    };
+  }
+
+  if (entriesCollapse === null) {
+    const today = todayISO();
+    const [ty, tm] = today.split('-');
+    entriesCollapse = {years: {}, months: {}, days: {}};
+    entriesCollapse.years[ty] = true;
+    entriesCollapse.months[`${ty}-${tm}`] = true;
+    entriesCollapse.days[today] = true;
+  }
+
+  const monthNames = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+  const years = Object.keys(tree).sort().reverse();
+
+  const mult = config.inputMultiplier || 1;
+  const fmtVal = (v) => {
+    if (mult !== 1) return v.toLocaleString('de-DE', {minimumFractionDigits:1, maximumFractionDigits:1}) + ' km';
+    if (config.step === '0.1') return v.toLocaleString('de-DE', {minimumFractionDigits:0, maximumFractionDigits:1});
+    return v.toLocaleString('de-DE');
+  };
+  const fmtEntry = (v) => {
+    if (mult !== 1) return Math.round(v / mult).toLocaleString('de-DE') + ' m';
+    if (config.step === '0.1') return v.toLocaleString('de-DE', {minimumFractionDigits:0, maximumFractionDigits:1});
+    return v.toLocaleString('de-DE');
+  };
+
+  let html = '';
+  for (const y of years) {
+    const yearOpen = !!entriesCollapse.years[y];
+    const yearTotal = Object.values(tree[y]).reduce((sum, mObj) =>
+      sum + Object.values(mObj).reduce((s, d) => s + d.total, 0), 0);
+    html += `
+      <div class="tree-year ${yearOpen ? 'open' : ''}">
+        <div class="tree-header tree-header-year" data-toggle="year" data-key="${y}">
+          <span class="tree-arrow">${yearOpen ? '▼' : '▶'}</span>
+          <span class="tree-label">${y}</span>
+          <span class="tree-total">${fmtVal(yearTotal)}</span>
+        </div>
+        <div class="tree-children" style="display:${yearOpen?'block':'none'}">
+    `;
+    const months = Object.keys(tree[y]).sort().reverse();
+    for (const m of months) {
+      const monthKey = `${y}-${m}`;
+      const monthOpen = !!entriesCollapse.months[monthKey];
+      const monthTotal = Object.values(tree[y][m]).reduce((s, d) => s + d.total, 0);
+      html += `
+        <div class="tree-month ${monthOpen ? 'open' : ''}">
+          <div class="tree-header tree-header-month" data-toggle="month" data-key="${monthKey}">
+            <span class="tree-arrow">${monthOpen ? '▼' : '▶'}</span>
+            <span class="tree-label">${monthNames[parseInt(m)-1]}</span>
+            <span class="tree-total">${fmtVal(monthTotal)}</span>
+          </div>
+          <div class="tree-children" style="display:${monthOpen?'block':'none'}">
+      `;
+      const days = Object.keys(tree[y][m]).sort().reverse();
+      for (const d of days) {
+        const dayOpen = !!entriesCollapse.days[d];
+        const dayObj = tree[y][m][d];
+        html += `
+          <div class="tree-day ${dayOpen ? 'open' : ''}">
+            <div class="tree-header tree-header-day" data-toggle="day" data-key="${d}">
+              <span class="tree-arrow">${dayOpen ? '▼' : '▶'}</span>
+              <span class="tree-label">${fmtDateDe(d)}</span>
+              <span class="tree-total">${fmtVal(dayObj.total)}</span>
+            </div>
+            <div class="tree-children" style="display:${dayOpen?'block':'none'}">
+              ${dayObj.entries.map(e => `
+                <div class="entry-item">
+                  <span>+ ${fmtEntry(e.count)}</span>
+                  <div class="entry-actions">
+                    <button class="btn-small" onclick="editEntry('${e.id}')">edit</button>
+                    <button class="btn-small danger" onclick="deleteEntry('${e.id}')">x</button>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+      html += `</div></div>`;
+    }
+    html += `</div></div>`;
+  }
+  c.innerHTML = html;
+
+  c.querySelectorAll('[data-toggle]').forEach(header => {
+    header.addEventListener('click', () => {
+      const type = header.dataset.toggle;
+      const key = header.dataset.key;
+      const map = type === 'year' ? entriesCollapse.years
+                : type === 'month' ? entriesCollapse.months
+                : entriesCollapse.days;
+      map[key] = !map[key];
+      renderEntries();
+    });
+  });
+}
+
+function renderChart(stats) {
+  const svg = document.getElementById('chart30');
+  const config = getConfig();
+  const W = 900, H = 320;
+  const PL = 56, PR = 16, PT = 16, PB = 56;
+  const chartW = W - PL - PR;
+  const chartH = H - PT - PB;
+  svg.innerHTML = '';
+
+  const renderedWidth = svg.getBoundingClientRect().width || W;
+  const isMobile = renderedWidth < 500;
+
+  const days = [];
+  for (let i = 29; i >= 0; i--) {
+    const d = addDays(todayISO(), -i);
+    days.push({date: d, count: stats.byDate[d] || 0});
+  }
+  const rawMax = Math.max(10, ...days.map(d => d.count));
+  function niceCeil(n) {
+    const pow = Math.pow(10, Math.floor(Math.log10(n)));
+    const norm = n / pow;
+    let nice;
+    if (norm <= 1) nice = 1;
+    else if (norm <= 2) nice = 2;
+    else if (norm <= 2.5) nice = 2.5;
+    else if (norm <= 5) nice = 5;
+    else nice = 10;
+    return nice * pow;
+  }
+  const yMax = niceCeil(rawMax);
+  const ticks = 5;
+  const barW = chartW / 30;
+
+  // gradient
+  svg.insertAdjacentHTML('beforeend',
+    `<defs><linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="${config.accent2}"/>
+      <stop offset="100%" stop-color="${config.accent}"/>
+    </linearGradient></defs>`);
+
+  // Y axis
+  const yLabelSize = isMobile ? 14 : 11;
+  for (let i = 0; i <= ticks; i++) {
+    const yVal = yMax * (1 - i/ticks);
+    const y = PT + chartH * (i/ticks);
+    svg.insertAdjacentHTML('beforeend',
+      `<line x1="${PL}" y1="${y}" x2="${W-PR}" y2="${y}" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>`);
+    svg.insertAdjacentHTML('beforeend',
+      `<text x="${PL - 8}" y="${y + 4}" fill="#e0ddd6" font-family="JetBrains Mono" font-size="${yLabelSize}" text-anchor="end">${yMax < 10 ? yVal.toLocaleString('de-DE',{minimumFractionDigits:1,maximumFractionDigits:1}) : Math.round(yVal).toLocaleString('de-DE')}</text>`);
+  }
+
+  // X axis
+  const xStep = isMobile ? 7 : 5;
+  const xLabelSize = isMobile ? 13 : 10;
+  days.forEach((d, i) => {
+    if (i === 0 || i === 29 || (i % xStep) === (xStep - 1)) {
+      const x = PL + i * barW + barW/2;
+      const [, m, dd] = d.date.split('-');
+      svg.insertAdjacentHTML('beforeend',
+        `<text x="${x}" y="${H - PB + 18}" fill="#e0ddd6" font-family="JetBrains Mono" font-size="${xLabelSize}" text-anchor="middle">${dd}.${m}</text>`);
+      svg.insertAdjacentHTML('beforeend',
+        `<line x1="${x}" y1="${PT + chartH}" x2="${x}" y2="${PT + chartH + 4}" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>`);
+    }
+  });
+
+  svg.insertAdjacentHTML('beforeend',
+    `<line x1="${PL}" y1="${PT + chartH}" x2="${W - PR}" y2="${PT + chartH}" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>`);
+  svg.insertAdjacentHTML('beforeend',
+    `<line x1="${PL}" y1="${PT}" x2="${PL}" y2="${PT + chartH}" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>`);
+
+  // Bars
+  const valueLabelSize = isMobile ? 11 : 9;
+  days.forEach((d, i) => {
+    const x = PL + i * barW;
+    const h = d.count > 0 ? Math.max(1, (chartH * d.count) / yMax) : 0;
+    const y = PT + chartH - h;
+    const color = d.count === 0 ? '#48484f' : 'url(#barGrad)';
+    svg.insertAdjacentHTML('beforeend',
+      `<rect x="${x+1.5}" y="${y}" width="${barW-3}" height="${h}" fill="${color}" data-date="${d.date}" data-count="${d.count}" class="chart-bar"/>`);
+    if (!isMobile && d.count > 0 && barW > 16) {
+      svg.insertAdjacentHTML('beforeend',
+        `<text x="${x + barW/2}" y="${y - 4}" fill="${config.accent2}" font-family="JetBrains Mono" font-size="${valueLabelSize}" text-anchor="middle" font-weight="700">${config.step==='0.1'?d.count.toFixed(1):d.count}</text>`);
+    }
+  });
+
+  // Axis labels
+  const axisLabelSize = isMobile ? 12 : 10;
+  svg.insertAdjacentHTML('beforeend',
+    `<text x="${PL - 44}" y="${PT + chartH/2}" fill="#b8b4ad" font-family="JetBrains Mono" font-size="${axisLabelSize}" text-anchor="middle" transform="rotate(-90 ${PL - 44} ${PT + chartH/2})">${config.unit}</text>`);
+  svg.insertAdjacentHTML('beforeend',
+    `<text x="${PL + chartW/2}" y="${H - 8}" fill="#b8b4ad" font-family="JetBrains Mono" font-size="${axisLabelSize}" text-anchor="middle">Datum</text>`);
+
+  // hover / touch
+  function showTip(bar, e) {
+    const tip = document.getElementById('tooltip');
+    let val;
+    if (config.inputMultiplier) {
+      val = Math.round(parseFloat(bar.dataset.count) / config.inputMultiplier).toLocaleString('de-DE') + ' m';
+    } else if (config.step==='0.1') {
+      val = parseFloat(bar.dataset.count).toFixed(1) + ' ' + config.unitShort;
+    } else {
+      val = parseInt(bar.dataset.count).toLocaleString('de-DE') + ' ' + config.unitShort;
+    }
+    tip.textContent = `${fmtDateDe(bar.dataset.date)}: ${val}`;
+    tip.style.display = 'block';
+    const cx = e.clientX || (e.touches && e.touches[0].clientX) || 0;
+    const cy = e.clientY || (e.touches && e.touches[0].clientY) || 0;
+    tip.style.left = (cx + 12) + 'px';
+    tip.style.top = (cy + 12) + 'px';
+  }
+  function hideTip() { document.getElementById('tooltip').style.display = 'none'; }
+  svg.querySelectorAll('.chart-bar').forEach(bar => {
+    bar.addEventListener('mouseenter', e => showTip(bar, e));
+    bar.addEventListener('mousemove', e => showTip(bar, e));
+    bar.addEventListener('mouseleave', hideTip);
+    bar.addEventListener('touchstart', e => showTip(bar, e), {passive: true});
+    bar.addEventListener('touchend', () => setTimeout(hideTip, 1500));
+  });
+}
+
+function renderBadges(stats) {
+  const container = document.getElementById('badgesContainer');
+  const state = getState();
+  const badges = getBadges();
+  container.innerHTML = '';
+  const unlockedCount = Object.keys(state.badges).length;
+  document.getElementById('badgeCount').textContent = `${unlockedCount} / ${badges.length}`;
+
+  for (const cat of CATEGORIES) {
+    const catBadges = badges.filter(b => b.cat === cat.key);
+    if (catBadges.length === 0) continue;
+    const unlocked = catBadges.filter(b => state.badges[b.id]).length;
+    const html = `
+      <div class="badge-cat">
+        <div class="badge-cat-title">${cat.label} <span class="badge-cat-count">${unlocked} / ${catBadges.length}</span></div>
+        <div class="badges-grid">
+          ${catBadges.map(b => renderBadge(b, stats)).join('')}
+        </div>
+      </div>
+    `;
+    container.insertAdjacentHTML('beforeend', html);
+  }
+}
+
+function renderBadge(b, stats) {
+  const state = getState();
+  const unlocked = !!state.badges[b.id];
+  const progress = b.getProgress(stats);
+  const displayProgress = b.getDisplayProgress ? b.getDisplayProgress(stats) : progress;
+  const pct = Math.min(100, (displayProgress / b.target) * 100);
+  let progressText;
+  if (b.customProgressText) {
+    progressText = b.customProgressText(stats);
+  } else if (b.target === 1) {
+    progressText = unlocked ? 'Erreicht' : 'Offen';
+  } else {
+    progressText = `${displayProgress.toLocaleString('de-DE')} / ${b.target.toLocaleString('de-DE')}`;
+  }
+  return `
+    <div class="badge ${unlocked ? 'unlocked' : ''}">
+      <div class="badge-header">
+        <div class="badge-icon">${b.icon}</div>
+        <div>
+          <div class="badge-title">${b.title}</div>
+        </div>
+      </div>
+      <div class="badge-desc">${b.desc}</div>
+      <div class="badge-progress-bar">
+        <div class="badge-progress-fill" style="width:${pct}%"></div>
+      </div>
+      <div class="badge-progress-text">
+        <span>${progressText}</span>
+        <span>${pct.toFixed(0)}%</span>
+      </div>
+      ${unlocked ? `<div class="badge-unlocked-date">✓ ${fmtDateDe(state.badges[b.id])}</div>` : ''}
+    </div>
+  `;
+}
+
+// ============================================================
+// ACTIONS
+// ============================================================
+function addEntry(count, date, source) {
+  const state = getState();
+  const config = getConfig();
+  if (!state.startDate) state.startDate = todayISO();
+  const id = 'e_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+  const storedCount = count * (config.inputMultiplier || 1);
+  const entry = {id, date, count: storedCount, ts: Date.now()};
+  if (source) entry.source = source;
+  state.entries.push(entry);
+  const stats = computeStats();
+  const {newlyUnlocked, revoked} = checkBadges(stats);
+  saveState(activeTracker);
+  newlyUnlocked.forEach(b => showToast(b, 'unlock'));
+  revoked.forEach(b => showToast(b, 'revoke'));
+  render();
+}
+
+function recalcTacho() {
+  if (activeTracker !== 'cycling') return;
+  const state = states.cycling;
+  const offset = TRACKERS.cycling.offset;
+  let tachoSum = 0;
+  state.entries.forEach(e => {
+    // Treat entries without source as tacho (backward compat with pre-source entries)
+    if (e.source !== 'free') tachoSum += e.count;
+  });
+  state.lastTachoStand = offset + Math.round(tachoSum * 10) / 10;
+  const hint = document.getElementById('tachoHint');
+  if (hint) hint.textContent = '— aktuell: ' + state.lastTachoStand.toLocaleString('de-DE') + ' km';
+}
+
+function deleteEntry(id) {
+  const state = getState();
+  state.entries = state.entries.filter(e => e.id !== id);
+  if (activeTracker === 'cycling') recalcTacho();
+  const stats = computeStats();
+  const {newlyUnlocked, revoked} = checkBadges(stats);
+  saveState(activeTracker);
+  newlyUnlocked.forEach(b => showToast(b, 'unlock'));
+  revoked.forEach(b => showToast(b, 'revoke'));
+  render();
+}
+window.deleteEntry = deleteEntry;
+
+function editEntry(id) {
+  const state = getState();
+  const config = getConfig();
+  const e = state.entries.find(x => x.id === id);
+  if (!e) return;
+  const mult = config.inputMultiplier || 1;
+  const displayVal = mult !== 1 ? Math.round(e.count / mult) : e.count;
+  const promptUnit = config.inputMultiplier ? config.inputLabel : config.unit;
+  const newVal = prompt('Neuer Wert in ' + promptUnit + ':', displayVal);
+  if (newVal === null) return;
+  const n = (config.step === '0.1' || config.inputMultiplier) ? parseFloat(newVal) : parseInt(newVal);
+  if (isNaN(n) || n <= 0) { alert('Ungültiger Wert'); return; }
+  e.count = n * mult;
+  if (activeTracker === 'cycling') recalcTacho();
+  const stats = computeStats();
+  const {newlyUnlocked, revoked} = checkBadges(stats);
+  saveState(activeTracker);
+  newlyUnlocked.forEach(b => showToast(b, 'unlock'));
+  revoked.forEach(b => showToast(b, 'revoke'));
+  render();
+}
+window.editEntry = editEntry;
+
+// ============================================================
+// INIT
+// ============================================================
+const config = getConfig();
+setAccentColors(config);
+
+document.getElementById('inputDate').value = todayISO();
+
+// Tab bar click handlers
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => switchTab(tab.dataset.tracker));
+});
+
+document.getElementById('addBtn').addEventListener('click', () => {
+  const cfg = getConfig();
+  if (cfg.key === 'cycling') {
+    const tachoVal = document.getElementById('inputTacho').value;
+    const freeVal = document.getElementById('inputFreeKm').value;
+    if (tachoVal) {
+      const tacho = parseFloat(tachoVal);
+      const lts = states.cycling.lastTachoStand || 13363;
+      if (isNaN(tacho) || tacho <= 0) { alert('Bitte gültigen Tacho-Stand eingeben'); return; }
+      const diff = Math.round((tacho - lts) * 10) / 10;
+      if (diff <= 0) { alert('Tacho-Stand muss höher sein als der aktuelle Stand (' + lts.toLocaleString('de-DE') + ' km)'); return; }
+      const d = document.getElementById('inputDateTacho').value;
+      if (!d) { alert('Bitte Datum wählen'); return; }
+      states.cycling.lastTachoStand = tacho;
+      addEntry(diff, d, 'tacho');
+      document.getElementById('inputTacho').value = '';
+      document.getElementById('tachoHint').textContent = '— aktuell: ' + tacho.toLocaleString('de-DE') + ' km';
+    } else if (freeVal) {
+      const km = parseFloat(freeVal);
+      if (isNaN(km) || km <= 0) { alert('Bitte gültige km eingeben'); return; }
+      const d = document.getElementById('inputDateFree').value;
+      if (!d) { alert('Bitte Datum wählen'); return; }
+      addEntry(km, d, 'free');
+      document.getElementById('inputFreeKm').value = '';
+    } else {
+      alert('Bitte Tacho-Stand oder freie km eingeben');
+      return;
+    }
+  } else {
+    const raw = document.getElementById('inputCount').value;
+    const c = (cfg.step === '0.1' || cfg.inputMultiplier) ? parseFloat(raw) : parseInt(raw);
+    const d = document.getElementById('inputDate').value;
+    if (isNaN(c) || c <= 0) { alert('Bitte gültige Anzahl eingeben'); return; }
+    if (!d) { alert('Bitte Datum wählen'); return; }
+    addEntry(c, d);
+    document.getElementById('inputCount').value = '';
+    document.getElementById('inputCount').focus();
+  }
+});
+
+document.getElementById('inputCount').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('addBtn').click();
+});
+document.getElementById('tachoHint').addEventListener('click', (ev) => {
+  ev.preventDefault();
+  const lts = states.cycling.lastTachoStand || 13363;
+  const newVal = prompt('Tacho-Stand manuell korrigieren (km):', lts);
+  if (newVal === null) return;
+  const n = parseFloat(newVal);
+  if (isNaN(n) || n < TRACKERS.cycling.offset) {
+    alert('Ungültiger Wert. Muss mindestens ' + TRACKERS.cycling.offset.toLocaleString('de-DE') + ' km sein.');
+    return;
+  }
+  states.cycling.lastTachoStand = n;
+  document.getElementById('tachoHint').textContent = '— aktuell: ' + n.toLocaleString('de-DE') + ' km';
+  saveState('cycling');
+});
+
+document.getElementById('inputTacho').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('addBtn').click();
+});
+document.getElementById('inputFreeKm').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('addBtn').click();
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  const cfg = getConfig();
+  if (confirm('Wirklich ALLE Daten für ' + cfg.unit + ' löschen? Das kann nicht rückgängig gemacht werden.')) {
+    localStorage.removeItem(cfg.storageKey);
+    states[activeTracker] = defaultState();
+    entriesCollapse = null;
+    render();
+  }
+});
+
+document.getElementById('exportBtn').addEventListener('click', () => {
+  const state = getState();
+  const cfg = getConfig();
+  const exportData = Object.assign({}, state, {tracker: activeTracker});
+  const blob = new Blob([JSON.stringify(exportData, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = cfg.syncKey + '-tracker-' + todayISO() + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('importBtn').addEventListener('click', () => {
+  document.getElementById('importFile').click();
+});
+document.getElementById('importFile').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (!data.entries) throw new Error('Ungültiges Format');
+      // Determine which tracker this belongs to
+      let targetKey = activeTracker;
+      if (data.tracker && TRACKERS[data.tracker]) {
+        targetKey = data.tracker;
+      }
+      const cfg = TRACKERS[targetKey];
+      if (confirm(`Import für ${cfg.unit}: ${data.entries.length} Einträge, ${Object.keys(data.badges||{}).length} Badges. Bestehende Daten werden überschrieben.`)) {
+        delete data.tracker;
+        states[targetKey] = data;
+        if (!states[targetKey].badges) states[targetKey].badges = {};
+        if (!states[targetKey].entries) states[targetKey].entries = [];
+        if (states[targetKey].bingoCompletedRounds == null) states[targetKey].bingoCompletedRounds = 0;
+        if (states[targetKey].bingoStartTs == null) states[targetKey].bingoStartTs = 0;
+        if (targetKey === 'cycling') {
+          const offset = TRACKERS.cycling.offset;
+          let tachoSum = 0;
+          states[targetKey].entries.forEach(e => { if (e.source !== 'free') tachoSum += e.count; });
+          states[targetKey].lastTachoStand = offset + Math.round(tachoSum * 10) / 10;
+        }
+        saveState(targetKey);
+        if (targetKey !== activeTracker) switchTab(targetKey);
+        else { entriesCollapse = null; render(); }
+      }
+    } catch(err) {
+      alert('Fehler beim Import: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+document.getElementById('authBtn').addEventListener('click', showSyncSetup);
+
+// Init sync UI
+updateSyncUI();
+if (firebaseUrl && syncCode) {
+  pullFromCloudAll().then(() => startSyncLoop());
+}
+
+// Initial render
+document.getElementById('brandTitle').innerHTML = getConfig().title;
+document.getElementById('inputLabel').textContent = getConfig().inputLabel;
+render();
+</script>
+</body>
+</html>
