@@ -1627,7 +1627,7 @@ async function pushToCloud(key) {
   // PROTECTION: if local has no entries, check cloud first before overwriting
   if (localEntries.length === 0) {
     try {
-      const checkRes = await fetch(`${firebaseUrl}/tracker/${syncCode}/${tk.syncKey}.json`, { cache: 'no-store' });
+      const checkRes = await fetch(`${firebaseUrl}/tracker/${syncCode}/${tk.syncKey}.json?_t=${Date.now()}`, { cache: 'no-store' });
       if (checkRes.ok) {
         const checkText = await checkRes.text();
         try {
@@ -1678,7 +1678,7 @@ async function pullFromCloudAll() {
     for (const key of Object.keys(TRACKERS)) {
       const tk = TRACKERS[key];
       try {
-        const res = await fetch(`${firebaseUrl}/tracker/${syncCode}/${tk.syncKey}.json`, { cache: 'no-store' });
+        const res = await fetch(`${firebaseUrl}/tracker/${syncCode}/${tk.syncKey}.json?_t=${Date.now()}`, { cache: 'no-store' });
         if (!res.ok) { errorLog.push(key + ':HTTP' + res.status); debugLog.push(key + ':HTTP' + res.status); continue; }
         const text = await res.text();
         let cloudState;
