@@ -1784,7 +1784,7 @@ async function pullFromCloudAll() {
     if (debugLog.length > 0) {
       const debugEl = document.createElement('div');
       debugEl.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#000;color:#0f0;font:10px monospace;padding:4px;z-index:9999;max-height:40vh;overflow:auto;';
-      debugEl.textContent = 'SYNC DEBUG: ' + debugLog.join(' | ');
+      debugEl.textContent = 'URL:' + firebaseUrl + '/tracker/' + syncCode + '/ | ' + debugLog.join(' | ');
       document.body.appendChild(debugEl);
     }
   } catch (e) {
