@@ -1638,139 +1638,102 @@ async function pullFromCloudAll() {
   if (!firebaseUrl || !syncCode) return;
   try {
     setSyncStatus('syncing', 'Lade...');
-    const res = await fetch(`${firebaseUrl}/tracker/${syncCode}.json`);
-    if (!res.ok) {
-      setSyncStatus('error', 'Server-Fehler: ' + res.status);
-      return;
-    }
-    const text = await res.text();
-    let cloudAll;
-    try {
-      cloudAll = JSON.parse(text);
-    } catch (parseErr) {
-      console.error('JSON parse failed, response was:', text.substring(0, 200));
-      setSyncStatus('error', 'Antwort kein JSON — Cache leeren & neu laden');
-      return;
-    }
-    // DIAG: show what we got from cloud
-    const diagKeys = cloudAll ? Object.keys(cloudAll) : [];
-    const diagInfo = diagKeys.map(k => k + ':' + ((cloudAll[k]?.entries||[]).length) + 'e').join(', ');
-    alert('CLOUD KEYS: ' + diagInfo + '\ncloudAll null? ' + (!cloudAll) + '\nType: ' + typeof cloudAll);
+    let anyChanged = false;
 
-    if (!cloudAll) {
-      // Cloud is empty, push all local states
-      for (const key of Object.keys(TRACKERS)) {
-        if (states[key].entries.length > 0) await pushToCloud(key);
-      }
-      setSyncStatus('online', 'Synced');
-      return;
-    }
-
-    let needsRender = false;
+    // Pull each tracker individually to avoid large response issues on mobile
     for (const key of Object.keys(TRACKERS)) {
       const tk = TRACKERS[key];
-      const cloudState = cloudAll[tk.syncKey];
-      if (!cloudState) {
-        // Cloud has no data for this tracker — push local if we have entries
-        if (states[key].entries && states[key].entries.length > 0) {
+      try {
+        const res = await fetch(`${firebaseUrl}/tracker/${syncCode}/${tk.syncKey}.json`);
+        if (!res.ok) continue;
+        const text = await res.text();
+        let cloudState;
+        try { cloudState = JSON.parse(text); } catch(e) { continue; }
+
+        if (!cloudState) {
+          // Cloud has no data for this tracker — push local if we have entries
+          if (states[key].entries && states[key].entries.length > 0) {
+            await pushToCloud(key);
+          }
+          continue;
+        }
+
+        const cloudEntries = cloudState.entries || [];
+        const localEntries = states[key].entries || [];
+        const cloudUpdatedAt = cloudState.updatedAt || 0;
+        const localUpdatedAt = states[key].updatedAt || 0;
+
+        // Protection: never overwrite local data with empty cloud state
+        if (cloudEntries.length === 0 && localEntries.length > 0) {
           await pushToCloud(key);
+          continue;
         }
-        continue;
-      }
 
-      const cloudEntries = cloudState.entries || [];
-      const localEntries = states[key].entries || [];
-      const cloudUpdatedAt = cloudState.updatedAt || 0;
-      const localUpdatedAt = states[key].updatedAt || 0;
-
-      // Protection: never overwrite local data with empty cloud state
-      if (cloudEntries.length === 0 && localEntries.length > 0) {
-        // Cloud is empty but we have data — push ours
-        await pushToCloud(key);
-        continue;
-      }
-
-      // Fresh device: no local data — just take cloud state directly
-      if (localEntries.length === 0 && cloudEntries.length > 0) {
-        states[key] = Object.assign({}, cloudState);
-        if (!states[key].entries) states[key].entries = [];
-        if (!states[key].badges) states[key].badges = {};
-        if (states[key].bingoCompletedRounds == null) states[key].bingoCompletedRounds = 0;
-        if (states[key].bingoStartTs == null) states[key].bingoStartTs = 0;
-        if (key === 'cycling') {
-          const offset = TRACKERS.cycling.offset;
-          let tachoSum = 0;
-          states[key].entries.forEach(e => { if (e.source !== 'free') tachoSum += e.count; });
-          states[key].lastTachoStand = offset + Math.round(tachoSum * 10) / 10;
+        // Fresh device: no local data — just take cloud state directly
+        if (localEntries.length === 0 && cloudEntries.length > 0) {
+          states[key] = Object.assign({}, cloudState);
+          if (!states[key].entries) states[key].entries = [];
+          if (!states[key].badges) states[key].badges = {};
+          if (states[key].bingoCompletedRounds == null) states[key].bingoCompletedRounds = 0;
+          if (states[key].bingoStartTs == null) states[key].bingoStartTs = 0;
+          if (key === 'cycling') {
+            const offset = TRACKERS.cycling.offset;
+            let tachoSum = 0;
+            states[key].entries.forEach(e => { if (e.source !== 'free') tachoSum += e.count; });
+            states[key].lastTachoStand = offset + Math.round(tachoSum * 10) / 10;
+          }
+          localStorage.setItem(tk.storageKey, JSON.stringify(states[key]));
+          anyChanged = true;
+          continue;
         }
-        localStorage.setItem(tk.storageKey, JSON.stringify(states[key]));
-        needsRender = true;
-        continue;
-      }
 
-      // Merge strategy: combine entries by unique ID
-      if (cloudUpdatedAt !== localUpdatedAt && (cloudEntries.length > 0 || localEntries.length > 0)) {
-        const localById = new Map(localEntries.map(e => [e.id, e]));
-        const cloudById = new Map(cloudEntries.map(e => [e.id, e]));
-        let merged = [];
-        // Add all local entries
-        for (const e of localEntries) merged.push(e);
-        // Add cloud entries that don't exist locally (new from other device)
-        for (const e of cloudEntries) {
-          if (!localById.has(e.id)) merged.push(e);
-        }
-        // Remove entries that were deleted locally (exist in cloud but deleted here)
-        // — if cloud has entries not in local AND local has a newer timestamp, those were deleted locally
-        if (localUpdatedAt > cloudUpdatedAt) {
-          const keepIds = new Set(localEntries.map(e => e.id));
-          // Also keep genuinely new cloud entries (those not in any prior local state)
-          // Heuristic: cloud entries newer than localUpdatedAt are new, not deleted
+        // Merge strategy: combine entries by unique ID
+        if (cloudUpdatedAt !== localUpdatedAt && (cloudEntries.length > 0 || localEntries.length > 0)) {
+          const localById = new Map(localEntries.map(e => [e.id, e]));
+          let merged = [];
+          for (const e of localEntries) merged.push(e);
           for (const e of cloudEntries) {
-            if (!keepIds.has(e.id) && (e.ts || 0) > localUpdatedAt) keepIds.add(e.id);
+            if (!localById.has(e.id)) merged.push(e);
           }
-          merged = merged.filter(e => keepIds.has(e.id));
-        }
-        // If cloud is newer, remove entries that were deleted on the other device
-        if (cloudUpdatedAt > localUpdatedAt) {
-          const keepIds = new Set(cloudEntries.map(e => e.id));
-          for (const e of localEntries) {
-            if (!keepIds.has(e.id) && (e.ts || 0) > cloudUpdatedAt) keepIds.add(e.id);
+          if (localUpdatedAt > cloudUpdatedAt) {
+            const keepIds = new Set(localEntries.map(e => e.id));
+            for (const e of cloudEntries) {
+              if (!keepIds.has(e.id) && (e.ts || 0) > localUpdatedAt) keepIds.add(e.id);
+            }
+            merged = merged.filter(e => keepIds.has(e.id));
           }
-          merged = merged.filter(e => keepIds.has(e.id));
+          if (cloudUpdatedAt > localUpdatedAt) {
+            const keepIds = new Set(cloudEntries.map(e => e.id));
+            for (const e of localEntries) {
+              if (!keepIds.has(e.id) && (e.ts || 0) > cloudUpdatedAt) keepIds.add(e.id);
+            }
+            merged = merged.filter(e => keepIds.has(e.id));
+          }
+          merged.sort((a, b) => (a.ts || 0) - (b.ts || 0));
+          const mergedBadges = Object.assign({}, states[key].badges || {}, cloudState.badges || {});
+          const newer = cloudUpdatedAt > localUpdatedAt ? cloudState : states[key];
+          states[key] = Object.assign({}, newer, { entries: merged, badges: mergedBadges });
+          if (!states[key].entries) states[key].entries = [];
+          if (!states[key].badges) states[key].badges = {};
+          if (states[key].bingoCompletedRounds == null) states[key].bingoCompletedRounds = 0;
+          if (states[key].bingoStartTs == null) states[key].bingoStartTs = 0;
+          if (key === 'cycling') {
+            const offset = TRACKERS.cycling.offset;
+            let tachoSum = 0;
+            states[key].entries.forEach(e => { if (e.source !== 'free') tachoSum += e.count; });
+            states[key].lastTachoStand = offset + Math.round(tachoSum * 10) / 10;
+          }
+          states[key].updatedAt = Math.max(cloudUpdatedAt, localUpdatedAt);
+          localStorage.setItem(tk.storageKey, JSON.stringify(states[key]));
+          await pushToCloud(key);
+          anyChanged = true;
         }
-        // Sort by timestamp
-        merged.sort((a, b) => (a.ts || 0) - (b.ts || 0));
-
-        // Merge badges (union — keep all unlocked)
-        const mergedBadges = Object.assign({}, states[key].badges || {}, cloudState.badges || {});
-
-        // Take the newer metadata
-        const newer = cloudUpdatedAt > localUpdatedAt ? cloudState : states[key];
-        states[key] = Object.assign({}, newer, {
-          entries: merged,
-          badges: mergedBadges
-        });
-        if (!states[key].entries) states[key].entries = [];
-        if (!states[key].badges) states[key].badges = {};
-        if (states[key].bingoCompletedRounds == null) states[key].bingoCompletedRounds = 0;
-        if (states[key].bingoStartTs == null) states[key].bingoStartTs = 0;
-        if (key === 'cycling') {
-          const offset = TRACKERS.cycling.offset;
-          let tachoSum = 0;
-          states[key].entries.forEach(e => { if (e.source !== 'free') tachoSum += e.count; });
-          states[key].lastTachoStand = offset + Math.round(tachoSum * 10) / 10;
-        }
-        states[key].updatedAt = Math.max(cloudUpdatedAt, localUpdatedAt);
-        localStorage.setItem(tk.storageKey, JSON.stringify(states[key]));
-        // Push merged state back to cloud
-        await pushToCloud(key);
-        if (key === activeTracker) needsRender = true;
+      } catch (trackerErr) {
+        console.error('Pull failed for', key, trackerErr);
       }
     }
 
-    if (needsRender) {
-      entriesCollapse = null;
-    }
+    if (anyChanged) entriesCollapse = null;
     render();
     setSyncStatus('online', 'Synced');
   } catch (e) {
