@@ -1134,7 +1134,7 @@ const TRACKERS = {
     step: '1',
     accent: '#ff6633',
     accent2: '#ffaa55',
-    isSwimming: false,
+    yearlyAvg: false,
     bingo: { type: 'number', min: 1, max: 100, cols: 10 }
   },
   pullups: {
@@ -1152,7 +1152,7 @@ const TRACKERS = {
     step: '1',
     accent: '#3388ff',
     accent2: '#55aaff',
-    isSwimming: false,
+    yearlyAvg: false,
     bingo: { type: 'number', min: 1, max: 30, cols: 6 }
   },
   situps: {
@@ -1170,7 +1170,7 @@ const TRACKERS = {
     step: '1',
     accent: '#33bb77',
     accent2: '#55dd99',
-    isSwimming: false,
+    yearlyAvg: false,
     bingo: null
   },
   cycling: {
@@ -1188,12 +1188,12 @@ const TRACKERS = {
     step: '0.1',
     accent: '#ffcc33',
     accent2: '#ffdd66',
-    isSwimming: false,
+    yearlyAvg: false,
     bingo: { type: 'range', ranges: (function(){ const r = [{label:'0–5',min:0,max:5}]; for(let i=1;i<=39;i++) r.push({label:`${i*5+1}–${(i+1)*5}`,min:i*5+1,max:(i+1)*5}); r.push({label:'200+',min:201,max:Infinity}); return r; })(), cols: 10 }
   },
   swimming: {
     key: 'swimming',
-    storageKey: 'swimming_tracker_v1',
+    storageKey: 'swimming_tracker_v2',
     syncKey: 'swimming',
     unit: 'Kilometer',
     unitShort: 'km',
@@ -1207,7 +1207,7 @@ const TRACKERS = {
     step: '1',
     accent: '#33bbdd',
     accent2: '#55ddff',
-    isSwimming: true,
+    yearlyAvg: true,
     bingo: null
   },
   steps: {
@@ -1225,7 +1225,7 @@ const TRACKERS = {
     step: '1',
     accent: '#aa55ff',
     accent2: '#cc88ff',
-    isSwimming: false,
+    yearlyAvg: false,
     bingo: null
   }
 };
@@ -2124,8 +2124,8 @@ function switchTab(trackerKey) {
   // Update target display
   document.getElementById('counterTarget').textContent = '/ ' + config.targetDisplay;
 
-  // Update avg label for swimming
-  document.getElementById('avgLabel').textContent = config.isSwimming ? 'Jahres-Ø' : 'Daily Avg';
+  // Update avg label
+  document.getElementById('avgLabel').textContent = config.yearlyAvg ? 'Jahres-Ø' : 'Daily Avg';
 
   render();
 }
@@ -2153,8 +2153,8 @@ function render() {
     ? (stats.predictedYears < 0.1 ? 'Erreicht!' : `~${stats.predictedYears.toFixed(1)} Jahre`)
     : 'Noch keine Daten';
 
-  // Daily Avg or Jahres-Ø for swimming
-  if (config.isSwimming) {
+  // Daily Avg or Jahres-Ø
+  if (config.yearlyAvg) {
     const yearlyKm = stats.dailyAvg * 365;
     document.getElementById('dailyAvg').textContent = yearlyKm.toLocaleString('de-DE', {minimumFractionDigits:1, maximumFractionDigits:1}) + ' km';
   } else {
