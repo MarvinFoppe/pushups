@@ -1583,6 +1583,18 @@ function getState() { return states[activeTracker]; }
 function getConfig() { return TRACKERS[activeTracker]; }
 function getBadges() { return BADGES_BY_TRACKER[activeTracker]; }
 
+// URL parameter ?reset=1 clears all tracker localStorage for a clean cloud pull
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get('reset') === '1') {
+  for (const key of Object.keys(TRACKERS)) {
+    localStorage.removeItem(TRACKERS[key].storageKey);
+  }
+  // Keep firebase-url and sync-code so cloud pull still works
+  // Remove ?reset=1 from URL so it doesn't reset on every reload
+  const cleanUrl = window.location.pathname;
+  window.history.replaceState({}, '', cleanUrl);
+}
+
 // Load all states on init
 for (const key of Object.keys(TRACKERS)) loadState(key);
 
@@ -1689,8 +1701,9 @@ async function pullFromCloudAll() {
           continue;
         }
 
-        // Fresh device: no local data — just take cloud state directly
-        if (localEntries.length === 0 && cloudEntries.length > 0) {
+        // Cloud has more data than local — take cloud state
+        // This covers: fresh device, reset device, corrupted local state
+        if (cloudEntries.length > localEntries.length && cloudEntries.length > 0) {
           states[key] = Object.assign({}, cloudState);
           if (!states[key].entries) states[key].entries = [];
           if (!states[key].badges) states[key].badges = {};
