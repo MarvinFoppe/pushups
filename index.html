@@ -1651,6 +1651,10 @@ async function pullFromCloudAll() {
         const text = await res.text();
         let cloudState;
         try { cloudState = JSON.parse(text); } catch(e) { errorLog.push(key + ':parseErr'); continue; }
+        // DIAG: show first tracker details
+        if (key === 'pushups') {
+          alert('PUSHUPS DIAG:\nCloud entries: ' + ((cloudState?.entries||[]).length) + '\nLocal entries: ' + ((states[key]?.entries||[]).length) + '\nCloud updatedAt: ' + (cloudState?.updatedAt||0) + '\nLocal updatedAt: ' + (states[key]?.updatedAt||0) + '\nResponse length: ' + text.length);
+        }
 
         if (!cloudState) {
           // Cloud has no data for this tracker — push local if we have entries
