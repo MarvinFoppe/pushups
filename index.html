@@ -948,6 +948,7 @@
     <button class="tab" data-tracker="cycling">&#x1F6B4; Fahrrad</button>
     <button class="tab" data-tracker="swimming">&#x1F3CA; Schwimmen</button>
     <button class="tab" data-tracker="steps">&#x1F45F; Schritte</button>
+    <button class="tab" data-tracker="stretching">&#x1F9D8; Dehnen</button>
   </div>
 
   <!-- HERO COUNTER -->
@@ -1225,6 +1226,24 @@ const TRACKERS = {
     step: '1',
     accent: '#aa55ff',
     accent2: '#cc88ff',
+    yearlyAvg: false,
+    bingo: null
+  },
+  stretching: {
+    key: 'stretching',
+    storageKey: 'stretching_tracker_v1',
+    syncKey: 'stretching',
+    unit: 'Minuten',
+    unitShort: 'min',
+    inputLabel: 'Minuten',
+    dailyBaseline: 15,
+    target: 100000,
+    targetDisplay: '100.000',
+    title: 'MISSION <span>100.000 MIN</span>',
+    offset: 0,
+    step: '1',
+    accent: '#ee77aa',
+    accent2: '#ff99cc',
     yearlyAvg: false,
     bingo: null
   }
@@ -1510,6 +1529,33 @@ BADGES_BY_TRACKER.steps = [
     {id:'sp_track',icon:'🎯',title:'On Track',desc:'Tagesdurchschnitt von 10.000+ ST',target:10000,getProgress:s=>Math.min(10000,Math.round(s.dailyAvg)),customProgressText:s=>`${Math.round(s.dailyAvg).toLocaleString('de-DE')} / 10.000 ST Ø/Tag`},
     {id:'sp_speed',icon:'⚡',title:'Speedrun',desc:'Tagesdurchschnitt von 25.000+ ST',target:25000,getProgress:s=>Math.min(25000,Math.round(s.dailyAvg)),customProgressText:s=>`${Math.round(s.dailyAvg).toLocaleString('de-DE')} / 25.000 ST Ø/Tag`},
     {id:'sp_endgame',icon:'🏁',title:'Endspurt',desc:'Letzte 10 Mio bis zum Ziel',target:10000000,getProgress:s=>Math.max(0,Math.min(10000000,s.total-90000000))}
+  ])
+];
+
+BADGES_BY_TRACKER.stretching = [
+  ...mkTotal([100,500,1000,2500,5000,10000,25000,50000,75000,100000], 'Minuten', 0),
+  ...mkDay([15,20,30,45,60,90,120], 'Minuten'),
+  ...mkSet([10,15,20,30,45,60,90,120], 'Minuten'),
+  ...mkStreak([3,7,14,30,60,100,200,365]),
+  ...mkCons([
+    {days:7,min:10,title:'Flexible Woche',desc:'7 Tage in Folge mit mind. 10 min'},
+    {days:7,min:15,title:'Routine-Woche',desc:'7 Tage in Folge mit mind. 15 min'},
+    {days:14,min:10,title:'Zwei Wochen Flow',desc:'14 Tage in Folge mit mind. 10 min'},
+    {days:14,min:15,title:'Zwei Wochen Disziplin',desc:'14 Tage in Folge mit mind. 15 min'},
+    {days:30,min:10,title:'Monat der Beweglichkeit',desc:'30 Tage in Folge mit mind. 10 min'},
+    {days:30,min:15,title:'Eiserner Monat',desc:'30 Tage in Folge mit mind. 15 min'},
+    {days:100,min:15,title:'Mobility-Maschine',desc:'100 Tage in Folge mit mind. 15 min'}
+  ]),
+  ...mkSpecial([
+    {id:'sp_first',icon:'🚀',title:'Erste Dehnung',desc:'Allererster Eintrag',target:1,getProgress:s=>s.entries>0?1:0},
+    {id:'sp_450_30',icon:'📅',title:'Monatsziel',desc:'450+ min in 30 Tagen',target:450,getProgress:s=>Math.min(450,s.bestWindow[30]||0)},
+    {id:'sp_900_30',icon:'📅',title:'Doppelter Monat',desc:'900+ min in 30 Tagen',target:900,getProgress:s=>Math.min(900,s.bestWindow[30]||0)},
+    {id:'sp_1350_90',icon:'🗓️',title:'Quartal',desc:'1.350+ min in 90 Tagen',target:1350,getProgress:s=>Math.min(1350,s.bestWindow[90]||0)},
+    {id:'sp_5475_365',icon:'🏅',title:'Jahresleistung',desc:'5.475+ min in 365 Tagen',target:5475,getProgress:s=>Math.min(5475,s.bestWindow[365]||0)},
+    {id:'sp_calendar',icon:'🗓️',title:'Kalender-Komplettist',desc:'An jedem der 365 Kalendertage mind. 1x gedehnt',target:365,getProgress:s=>Math.min(365,s.uniqueCalendarDays)},
+    {id:'sp_track',icon:'🎯',title:'On Track',desc:'Tagesdurchschnitt von 15+ min',target:15,getProgress:s=>Math.min(15,Math.round(s.dailyAvg)),customProgressText:s=>`${Math.round(s.dailyAvg).toLocaleString('de-DE')} / 15 min Ø/Tag`},
+    {id:'sp_speed',icon:'⚡',title:'Flexi-King',desc:'Tagesdurchschnitt von 30+ min',target:30,getProgress:s=>Math.min(30,Math.round(s.dailyAvg)),customProgressText:s=>`${Math.round(s.dailyAvg).toLocaleString('de-DE')} / 30 min Ø/Tag`},
+    {id:'sp_endgame',icon:'🏁',title:'Endspurt',desc:'Letzte 10.000 bis zum Ziel',target:10000,getProgress:s=>Math.max(0,Math.min(10000,s.total-90000))}
   ])
 ];
 
