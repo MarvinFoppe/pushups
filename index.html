@@ -1164,27 +1164,31 @@
     color: var(--text-faint);
     margin-top: 8px;
   }
-  .gen-actions { margin: 4px 0 8px; display: flex; justify-content: center; }
-  .gen-actions .btn-primary { max-width: 280px; }
-  .gen-decision { margin: 4px 0 16px; }
-  .gen-decision-label {
+  .gen-actions { margin: 4px 0 8px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+  .gen-actions .btn-primary { max-width: 220px; }
+  .gen-checklist {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-width: 380px;
+    margin: 0 auto 18px;
+  }
+  .gen-check-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
     font-family: 'JetBrains Mono', monospace;
     font-size: 11px;
     color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    margin-bottom: 10px;
+    text-align: left;
+    transition: all 0.3s;
   }
-  .gen-decision-btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-  .btn-decide {
-    padding: 10px 20px;
-    font-size: 12px;
-    border: 1px solid var(--border);
-    background: var(--bg-elev-2);
-    color: var(--text);
-  }
-  .btn-decide.done:hover { background: var(--success); color: #1a1a1a; border-color: var(--success); }
-  .btn-decide.fail:hover { background: #ff5566; color: #fff; border-color: #ff5566; }
+  .gen-check-row.met { border-color: var(--success); color: var(--text); background: rgba(68,204,136,0.08); }
+  .gen-check-icon { font-size: 14px; flex-shrink: 0; }
   .gen-status { margin: 4px 0 16px; display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; }
   .gen-status-badge {
     font-family: 'JetBrains Mono', monospace;
@@ -1194,7 +1198,7 @@
     padding: 6px 12px;
   }
   .gen-status-badge.done { background: rgba(68,204,136,0.15); color: var(--success); }
-  .gen-status-badge.fail { background: rgba(255,85,102,0.15); color: #ff5566; }
+  .gen-status-badge.pending { background: rgba(184,180,173,0.15); color: var(--text-faint); }
   .gen-status-time { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-faint); }
   .gen-stats {
     margin-top: 18px;
@@ -1440,14 +1444,8 @@
       <div class="gen-card">
         <div class="gen-empty" id="genEmpty">Klick auf &bdquo;Würfeln&ldquo; für dein zufälliges Tagesprogramm.</div>
         <div class="gen-items" id="genItems"></div>
+        <div class="gen-checklist" id="genChecklist"></div>
         <div class="gen-actions" id="genActions"></div>
-        <div class="gen-decision" id="genDecision" style="display:none">
-          <div class="gen-decision-label">Challenge heute gemacht?</div>
-          <div class="gen-decision-btns">
-            <button class="btn-decide done" id="genDoneBtn">&#x2705; Geschafft</button>
-            <button class="btn-decide fail" id="genFailBtn">&#x274C; Nicht geschafft</button>
-          </div>
-        </div>
         <div class="gen-status" id="genStatus" style="display:none"></div>
         <div class="gen-note" id="genNote"></div>
         <div class="gen-stats" id="genStats"></div>
@@ -3213,9 +3211,6 @@ function renderStats() {
   const earliest = statsEarliestDate(dailyTotals);
   const today = todayISO();
 
-  // Hydrate today's rolled challenge from the persisted log (survives page reloads)
-  if (!currentPlan && challengeLog[today]) currentPlan = challengeLog[today].plan;
-
   // ---- WEEKLY ----
   const curMonday = mondayOf(today);
   const curWeek = statsWeeklyPct(dailyTotals, curMonday);
@@ -3331,17 +3326,17 @@ let currentPlan = null;
 
 function statsRoundNicely(key, amount) {
   switch (key) {
-    case 'pushups': return { value: Math.max(5, Math.round(amount / 5) * 5), unit: 'Liegestütze' };
-    case 'pullups': return { value: Math.max(2, Math.round(amount / 2) * 2), unit: 'Klimmzüge' };
-    case 'situps': return { value: Math.max(10, Math.round(amount / 10) * 10), unit: 'Situps' };
-    case 'cycling': return { value: Math.max(0.5, Math.round(amount / 0.5) * 0.5), unit: 'km Radfahren' };
+    case 'pushups': { const v = Math.max(5, Math.round(amount / 5) * 5); return { value: v, unit: 'Liegestütze', native: v }; }
+    case 'pullups': { const v = Math.max(2, Math.round(amount / 2) * 2); return { value: v, unit: 'Klimmzüge', native: v }; }
+    case 'situps': { const v = Math.max(10, Math.round(amount / 10) * 10); return { value: v, unit: 'Situps', native: v }; }
+    case 'cycling': { const v = Math.max(0.5, Math.round(amount / 0.5) * 0.5); return { value: v, unit: 'km Radfahren', native: v }; }
     case 'swimming': {
       const m = Math.max(50, Math.round((amount * 1000) / 50) * 50);
-      return { value: m, unit: 'm Schwimmen' };
+      return { value: m, unit: 'm Schwimmen', native: m / 1000 };
     }
-    case 'steps': return { value: Math.max(500, Math.round(amount / 500) * 500), unit: 'Schritte' };
-    case 'stretching': return { value: Math.max(5, Math.round(amount / 5) * 5), unit: 'Min. Dehnen' };
-    default: return { value: Math.round(amount), unit: TRACKERS[key].unit };
+    case 'steps': { const v = Math.max(500, Math.round(amount / 500) * 500); return { value: v, unit: 'Schritte', native: v }; }
+    case 'stretching': { const v = Math.max(5, Math.round(amount / 5) * 5); return { value: v, unit: 'Min. Dehnen', native: v }; }
+    default: { const v = Math.round(amount); return { value: v, unit: TRACKERS[key].unit, native: v }; }
   }
 }
 
@@ -3375,20 +3370,16 @@ function rollWorkout() {
   // 5) Hard cap per category at N× baseline (never more than "avg × Anzahl Kategorien"), floor so nothing is silly-small
   mult = mult.map(m => Math.min(N, Math.max(0.35, m)));
 
+  // Only sets currentPlan in-memory — nothing is persisted until the user explicitly accepts it
   currentPlan = chosen.map((key, i) => {
     const tk = TRACKERS[key];
     const rawAmount = mult[i] * tk.dailyBaseline;
     const rounded = statsRoundNicely(key, rawAmount);
-    return { key, icon: TRACKER_ICONS[key] || '🏆', amount: rounded.value, unit: rounded.unit };
+    return { key, icon: TRACKER_ICONS[key] || '🏆', amount: rounded.value, unit: rounded.unit, required: rounded.native };
   });
-
-  // Persist today's roll — undecided (completed:null) until the user marks it done/not done
-  const today = todayISO();
-  challengeLog[today] = { plan: currentPlan, completed: null, rolledAt: Date.now(), decidedAt: null };
-  saveChallengeLog();
 }
 
-// ---- CHALLENGE COMPLETION TRACKING ----
+// ---- CHALLENGE ACCEPTANCE + AUTO-CHECK ----
 // (challengeLog itself is declared earlier, alongside `states`, so it's ready before init calls loadChallengeLog())
 
 function loadChallengeLog() {
@@ -3409,55 +3400,79 @@ function saveChallengeLog() {
   }
 }
 
-function decideChallenge(done) {
+// Lock in today's rolled plan. From this point on, completion is auto-checked (never manually set) —
+// including retroactively, if entries for that date get added/edited later.
+function acceptChallenge() {
+  if (!currentPlan) return;
   const today = todayISO();
-  if (!challengeLog[today]) return;
-  challengeLog[today].completed = done;
-  challengeLog[today].decidedAt = Date.now();
+  challengeLog[today] = { plan: currentPlan, accepted: true, acceptedAt: Date.now() };
   saveChallengeLog();
-  renderGenerator();
 }
 
+// Un-accept today's challenge (e.g. genuinely infeasible) so it can be re-rolled/re-accepted
 function resetTodayChallenge() {
   const today = todayISO();
   if (!challengeLog[today]) return;
-  challengeLog[today].completed = null;
-  challengeLog[today].decidedAt = null;
+  delete challengeLog[today];
   saveChallengeLog();
-  currentPlan = challengeLog[today].plan;
   renderGenerator();
 }
 
-// Count decided challenges (done vs. total) for the current week and all-time
+function isChallengeAccepted(entry) {
+  // Accepts both the current format (accepted:true) and challenge logs saved by an earlier
+  // version of this feature (completed:true/false), so nothing already saved gets lost.
+  return !!entry && (entry.accepted === true || entry.completed === true || entry.completed === false);
+}
+
+// The native (storage-unit) amount required for a plan item — falls back to a sane default
+// for challenge logs saved before "required" was tracked per item.
+function requiredAmountFor(item) {
+  if (item.required != null) return item.required;
+  return item.key === 'swimming' ? item.amount / 1000 : item.amount;
+}
+
+// A plan is "met" once EVERY item in it has enough entries logged for that exact date —
+// recomputed live, so backfilling an old date later automatically flips it to met.
+function isChallengeMet(dateISO, plan) {
+  if (!plan || plan.length === 0) return false;
+  return plan.every(item => {
+    const entries = (states[item.key] && states[item.key].entries) || [];
+    const actual = entries.filter(e => e.date === dateISO).reduce((s, e) => s + e.count, 0);
+    return actual >= requiredAmountFor(item) - 1e-9;
+  });
+}
+
+// Count accepted challenges (met vs. total accepted) for the current week and all-time
 function challengeStats() {
   const today = todayISO();
   const monday = mondayOf(today);
   const sunday = addDays(monday, 6);
-  let weekDone = 0, weekDecided = 0, totalDone = 0, totalDecided = 0;
+  let weekDone = 0, weekAccepted = 0, totalDone = 0, totalAccepted = 0;
   for (const d of Object.keys(challengeLog)) {
     const c = challengeLog[d];
-    if (c.completed !== true && c.completed !== false) continue;
-    totalDecided++;
-    if (c.completed) totalDone++;
+    if (!isChallengeAccepted(c)) continue;
+    totalAccepted++;
+    const met = isChallengeMet(d, c.plan);
+    if (met) totalDone++;
     if (d >= monday && d <= sunday) {
-      weekDecided++;
-      if (c.completed) weekDone++;
+      weekAccepted++;
+      if (met) weekDone++;
     }
   }
-  return { weekDone, weekDecided, totalDone, totalDecided };
+  return { weekDone, weekAccepted, totalDone, totalAccepted };
 }
 
 function renderChallengeStats() {
   const statsEl = document.getElementById('genStats');
   if (!statsEl) return;
   const s = challengeStats();
-  if (s.totalDecided === 0) {
+  if (s.totalAccepted === 0) {
     statsEl.innerHTML = '';
     return;
   }
   statsEl.innerHTML = `
-    <div class="gen-stat-row"><strong>${s.weekDone} / ${s.weekDecided}</strong><span>Diese Woche geschafft</span></div>
-    <div class="gen-stat-row"><strong>${s.totalDone} / ${s.totalDecided}</strong><span>Insgesamt geschafft</span></div>
+    <div class="gen-stat-row"><strong>${s.weekDone} / ${s.weekAccepted}</strong><span>Diese Woche geschafft</span></div>
+    <div class="gen-stat-row"><strong>${s.totalDone} / ${s.totalAccepted}</strong><span>Insgesamt geschafft</span></div>
   `;
 }
 
@@ -3469,20 +3484,24 @@ function rebindGenBtn() {
 function renderGenerator() {
   const empty = document.getElementById('genEmpty');
   const itemsEl = document.getElementById('genItems');
+  const checklistEl = document.getElementById('genChecklist');
   const actions = document.getElementById('genActions');
-  const decisionEl = document.getElementById('genDecision');
   const statusEl = document.getElementById('genStatus');
   const note = document.getElementById('genNote');
-  if (!empty || !itemsEl || !actions || !decisionEl || !statusEl || !note) return;
+  if (!empty || !itemsEl || !checklistEl || !actions || !statusEl || !note) return;
 
   const today = todayISO();
   const entry = challengeLog[today];
+  const accepted = isChallengeAccepted(entry);
+
+  // Once accepted, today's locked-in plan always wins over whatever is in memory
+  if (accepted) currentPlan = entry.plan;
 
   if (!currentPlan) {
     empty.style.display = '';
     itemsEl.innerHTML = '';
+    checklistEl.innerHTML = '';
     actions.innerHTML = '<button class="btn-primary" id="genBtn">&#x1F3B2; Würfeln</button>';
-    decisionEl.style.display = 'none';
     statusEl.style.display = 'none';
     note.textContent = '';
     rebindGenBtn();
@@ -3499,29 +3518,41 @@ function renderGenerator() {
     </div>
   `).join('');
 
-  const decided = entry && (entry.completed === true || entry.completed === false);
+  if (accepted) {
+    // Auto-check: compare today's actual tracked entries per category against the plan
+    checklistEl.innerHTML = currentPlan.map(p => {
+      const entries = (states[p.key] && states[p.key].entries) || [];
+      const actual = entries.filter(e => e.date === today).reduce((s, e) => s + e.count, 0);
+      const met = actual >= requiredAmountFor(p) - 1e-9;
+      return `<div class="gen-check-row ${met ? 'met' : ''}">
+        <span class="gen-check-icon">${met ? '&#x2705;' : '&#x23F3;'}</span>
+        <span>${p.icon} ${p.amount.toLocaleString('de-DE')} ${p.unit}</span>
+      </div>`;
+    }).join('');
 
-  if (decided) {
-    actions.innerHTML = '';
-    decisionEl.style.display = 'none';
+    const met = isChallengeMet(today, currentPlan);
+    actions.innerHTML = '<button class="btn-small" id="genResetBtn">&#8635; Challenge zurücksetzen</button>';
     statusEl.style.display = '';
-    const when = entry.decidedAt ? new Date(entry.decidedAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : '';
-    statusEl.innerHTML = (entry.completed
-      ? '<span class="gen-status-badge done">&#x2705; Heute geschafft</span>'
-      : '<span class="gen-status-badge fail">&#x274C; Heute nicht geschafft</span>')
-      + (when ? ` <span class="gen-status-time">${when} Uhr</span>` : '')
-      + ' <button class="btn-small" id="genResetBtn">&#8635; Zurücksetzen</button>';
+    statusEl.innerHTML = met
+      ? '<span class="gen-status-badge done">&#x2705; Challenge geschafft</span>'
+      : '<span class="gen-status-badge pending">&#x23F3; Noch nicht erreicht — trag nach, sobald du es schaffst</span>';
     note.textContent = '';
     const resetBtn = document.getElementById('genResetBtn');
     if (resetBtn) resetBtn.addEventListener('click', resetTodayChallenge);
   } else {
-    actions.innerHTML = '<button class="btn-primary" id="genBtn">&#x1F3B2; Neu würfeln</button>';
-    decisionEl.style.display = '';
+    checklistEl.innerHTML = '';
     statusEl.style.display = 'none';
+    actions.innerHTML = `
+      <button class="btn-small" id="genRerollBtn">&#x1F3B2; Neu würfeln</button>
+      <button class="btn-primary" id="genAcceptBtn">&#x2705; Annehmen</button>
+    `;
     note.textContent = currentPlan.length === 1
       ? 'Heute volle Konzentration auf eine Kategorie.'
       : `Kombiniert aus ${currentPlan.length} Kategorien.`;
-    rebindGenBtn();
+    const rerollBtn = document.getElementById('genRerollBtn');
+    if (rerollBtn) rerollBtn.addEventListener('click', () => { rollWorkout(); renderGenerator(); });
+    const acceptBtn = document.getElementById('genAcceptBtn');
+    if (acceptBtn) acceptBtn.addEventListener('click', () => { acceptChallenge(); renderGenerator(); });
   }
 
   renderChallengeStats();
@@ -3745,8 +3776,7 @@ document.getElementById('importFile').addEventListener('change', e => {
 
 document.getElementById('authBtn').addEventListener('click', showSyncSetup);
 
-document.getElementById('genDoneBtn').addEventListener('click', () => decideChallenge(true));
-document.getElementById('genFailBtn').addEventListener('click', () => decideChallenge(false));
+// (Accept / reroll / reset buttons for the challenge generator are wired dynamically in renderGenerator())
 
 // Expandable category breakdown per week row (delegated click)
 document.getElementById('statsWeekList').addEventListener('click', (e) => {
