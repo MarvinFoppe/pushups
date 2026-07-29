@@ -22,6 +22,8 @@
     --success: #44cc88;
     --locked: #7a7a82;
     --locked-text: #b8b4ad;
+    --radius: 10px;
+    --radius-sm: 6px;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -924,6 +926,305 @@
     .badge:hover { transform: none; }
   }
 
+  /* GLOBAL POLISH — softer, rounded, more scannable */
+  .input-card, .entries-card, .chart-card, .bingo-card, .hero, .stats-hero,
+  .gen-card, .gen-item, .stats-cat, .badge, .btn-primary, .btn-small,
+  .btn-auth, .tab, input[type="number"], input[type="date"], .toast,
+  .badge-cat, .btn-decide {
+    border-radius: var(--radius);
+  }
+  .stats-row-bar-wrap, .stats-bar, .stats-tag, .gen-status-badge {
+    border-radius: var(--radius-sm);
+  }
+  .section-header { margin-bottom: 18px; }
+
+  /* STATS VIEW */
+  .stats-hero {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    margin-bottom: 16px;
+  }
+  .stats-hero-row {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .stats-big-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+  }
+  .stats-big {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 56px;
+    line-height: 1;
+    color: var(--accent);
+  }
+  .stats-bar {
+    height: 8px;
+    background: #48484f;
+    overflow: hidden;
+    margin-top: 12px;
+    border-radius: 4px;
+  }
+  .stats-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    transition: width 0.4s;
+  }
+  .stats-cat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 10px;
+    margin-top: 16px;
+  }
+  .stats-cat {
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    padding: 10px 12px;
+  }
+  .stats-cat-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .stats-cat-pct {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    color: var(--text);
+  }
+  .stats-day-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .stats-day-row:hover { background: rgba(255,255,255,0.03); border-radius: var(--radius-sm); }
+  .stats-day-row:last-child { border-bottom: none; }
+
+  .stats-week-row {
+    padding: 2px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .stats-week-row:last-child { border-bottom: none; }
+  .stats-row-main {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 8px;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    transition: background 0.15s;
+  }
+  .stats-row-main:hover { background: rgba(255,255,255,0.05); }
+  .stats-row-caret {
+    font-size: 10px;
+    color: var(--text-faint);
+    transition: transform 0.2s;
+    flex-shrink: 0;
+  }
+  .stats-week-row.open .stats-row-caret { transform: rotate(180deg); color: var(--accent); }
+  .stats-row-detail {
+    display: none;
+    padding: 4px 8px 16px;
+  }
+  .stats-week-row.open .stats-row-detail { display: block; }
+  .stats-detail-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin: 12px 0 8px;
+  }
+  .stats-detail-label:first-child { margin-top: 4px; }
+  .stats-mini-days {
+    background: rgba(0,0,0,0.12);
+    border-radius: var(--radius-sm);
+    padding: 4px 10px;
+  }
+  .stats-mini-day-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .stats-mini-day-row:last-child { border-bottom: none; }
+  .stats-mini-day-date {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    min-width: 68px;
+  }
+  .stats-row-bar-wrap.small { height: 5px; }
+  .stats-mini-day-pct {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text);
+    min-width: 38px;
+    text-align: right;
+  }
+  .stats-row-date {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    min-width: 150px;
+  }
+  .stats-row-bar-wrap {
+    flex: 1;
+    height: 8px;
+    background: #48484f;
+    overflow: hidden;
+    border-radius: 4px;
+  }
+  .stats-row-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.4s;
+  }
+  .stats-row-pct {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    min-width: 58px;
+    text-align: right;
+  }
+  .stats-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 3px 8px;
+    border-radius: 3px;
+    white-space: nowrap;
+    min-width: 116px;
+    text-align: center;
+  }
+  .stats-tag.above { background: rgba(68,204,136,0.15); color: var(--success); }
+  .stats-tag.below { background: rgba(255,51,68,0.15); color: #ff5566; }
+  .stats-tag.avg { background: rgba(184,180,173,0.15); color: var(--text-faint); }
+
+  .gen-card {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    text-align: center;
+  }
+  .gen-empty {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-faint);
+    margin-bottom: 16px;
+  }
+  .gen-items {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin: 0 0 20px;
+  }
+  .gen-item {
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    padding: 16px 12px;
+  }
+  .gen-item-icon { font-size: 28px; margin-bottom: 6px; }
+  .gen-item-amount {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 26px;
+    color: var(--accent);
+    line-height: 1;
+  }
+  .gen-item-unit {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-top: 4px;
+  }
+  .gen-note {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-faint);
+    margin-top: 8px;
+  }
+  .gen-actions { margin: 4px 0 8px; display: flex; justify-content: center; }
+  .gen-actions .btn-primary { max-width: 280px; }
+  .gen-decision { margin: 4px 0 16px; }
+  .gen-decision-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 10px;
+  }
+  .gen-decision-btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .btn-decide {
+    padding: 10px 20px;
+    font-size: 12px;
+    border: 1px solid var(--border);
+    background: var(--bg-elev-2);
+    color: var(--text);
+  }
+  .btn-decide.done:hover { background: var(--success); color: #1a1a1a; border-color: var(--success); }
+  .btn-decide.fail:hover { background: #ff5566; color: #fff; border-color: #ff5566; }
+  .gen-status { margin: 4px 0 16px; display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; }
+  .gen-status-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 6px 12px;
+  }
+  .gen-status-badge.done { background: rgba(68,204,136,0.15); color: var(--success); }
+  .gen-status-badge.fail { background: rgba(255,85,102,0.15); color: #ff5566; }
+  .gen-status-time { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-faint); }
+  .gen-stats {
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 32px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .gen-stat-row { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .gen-stat-row span {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .gen-stat-row strong {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 26px;
+    color: var(--accent);
+  }
+  @media (max-width: 600px) {
+    .stats-big { font-size: 40px; }
+    .stats-row-date { min-width: 96px; font-size: 10px; }
+    .stats-tag { min-width: 88px; font-size: 8px; }
+    .gen-stats { gap: 20px; }
+  }
+
 </style>
 </head>
 <body>
@@ -949,7 +1250,10 @@
     <button class="tab" data-tracker="swimming">&#x1F3CA; Schwimmen</button>
     <button class="tab" data-tracker="steps">&#x1F45F; Schritte</button>
     <button class="tab" data-tracker="stretching">&#x1F9D8; Dehnen</button>
+    <button class="tab" data-tracker="stats">&#x1F4CA; Statistik</button>
   </div>
+
+  <div id="trackerView">
 
   <!-- HERO COUNTER -->
   <div class="hero">
@@ -1096,6 +1400,62 @@
     </div>
     <div id="badgesContainer"></div>
   </div>
+
+  </div>
+  <!-- /trackerView -->
+
+  <!-- STATISTICS TAB -->
+  <div id="statsView" style="display:none">
+
+    <!-- WEEKLY OVERVIEW -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title"><span class="section-title-accent">&#x203A;</span> Wochenübersicht <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-faint);text-transform:none;letter-spacing:0;margin-left:8px">Mo&ndash;So</span></div>
+      </div>
+      <div class="stats-hero">
+        <div class="stats-big-label">Diese Woche geschafft</div>
+        <div class="stats-hero-row">
+          <div class="stats-big" id="statsWeekPct">0%</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-faint)" id="statsWeekRange">&mdash;</div>
+        </div>
+        <div class="stats-bar"><div class="stats-bar-fill" id="statsWeekBarFill" style="width:0%"></div></div>
+        <div class="stats-cat-grid" id="statsWeekCatGrid"></div>
+      </div>
+      <div class="entries-card" id="statsWeekList"></div>
+    </div>
+
+    <!-- DAILY BREAKDOWN -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title"><span class="section-title-accent">&#x203A;</span> Tagesübersicht <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-faint);text-transform:none;letter-spacing:0;margin-left:8px">letzte 30 Tage</span></div>
+      </div>
+      <div class="entries-card" id="statsDayList"></div>
+    </div>
+
+    <!-- RANDOM DAILY PROGRAM GENERATOR -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title"><span class="section-title-accent">&#x203A;</span> Tages-Programm-Generator</div>
+      </div>
+      <div class="gen-card">
+        <div class="gen-empty" id="genEmpty">Klick auf &bdquo;Würfeln&ldquo; für dein zufälliges Tagesprogramm.</div>
+        <div class="gen-items" id="genItems"></div>
+        <div class="gen-actions" id="genActions"></div>
+        <div class="gen-decision" id="genDecision" style="display:none">
+          <div class="gen-decision-label">Challenge heute gemacht?</div>
+          <div class="gen-decision-btns">
+            <button class="btn-decide done" id="genDoneBtn">&#x2705; Geschafft</button>
+            <button class="btn-decide fail" id="genFailBtn">&#x274C; Nicht geschafft</button>
+          </div>
+        </div>
+        <div class="gen-status" id="genStatus" style="display:none"></div>
+        <div class="gen-note" id="genNote"></div>
+        <div class="gen-stats" id="genStats"></div>
+      </div>
+    </div>
+
+  </div>
+  <!-- /statsView -->
 
   <div class="footer">
     <div id="footerLabel">Fitness Tracker &middot; Local Storage</div>
@@ -1573,6 +1933,7 @@ const CATEGORIES = [
 // ============================================================
 let activeTracker = 'pushups';
 let states = {};
+let challengeLog = {}; // daily program-generator challenge history (declared early: loaded during init, below)
 
 function defaultState() {
   return {
@@ -1583,6 +1944,52 @@ function defaultState() {
     bingoStartTs: 0,
     updatedAt: 0
   };
+}
+
+// ------------------------------------------------------------
+// SWIMMING — hardcoded baseline entries.
+// Swimming is only ever logged on the phone, and cross-device cloud sync
+// for it has been unreliable. These entries are baked directly into the
+// code so they always exist locally, independent of localStorage/cloud
+// sync state (entry.count is stored in km, matching the km/m multiplier).
+// ------------------------------------------------------------
+const SWIMMING_SEED_ENTRIES = [
+  { id: 'seed_sw_20260624a', date: '2026-06-24', count: 1.42, ts: new Date('2026-06-24T12:00:00').getTime() },
+  { id: 'seed_sw_20260624b', date: '2026-06-24', count: 1.0,  ts: new Date('2026-06-24T12:05:00').getTime() },
+  { id: 'seed_sw_20260625',  date: '2026-06-25', count: 1.1,  ts: new Date('2026-06-25T12:00:00').getTime() },
+  { id: 'seed_sw_20260626',  date: '2026-06-26', count: 1.0,  ts: new Date('2026-06-26T12:00:00').getTime() },
+  { id: 'seed_sw_20260627',  date: '2026-06-27', count: 0.15, ts: new Date('2026-06-27T12:00:00').getTime() },
+  { id: 'seed_sw_20260712',  date: '2026-07-12', count: 2.5,  ts: new Date('2026-07-12T12:00:00').getTime() }
+];
+
+// Merges the hardcoded swimming entries into a state if they're missing (idempotent, dedupes by id)
+function ensureSwimmingSeed(state) {
+  let added = false;
+  for (const seed of SWIMMING_SEED_ENTRIES) {
+    // Match by exact id (idempotent re-loads) OR by same date+amount (the phone's real
+    // entry for that swim already exists under its own auto-generated id) — either way,
+    // never add a duplicate for a swim that's already recorded.
+    const alreadyExists = state.entries.some(e =>
+      e.id === seed.id || (e.date === seed.date && Math.abs(e.count - seed.count) < 0.001)
+    );
+    if (!alreadyExists) {
+      state.entries.push(Object.assign({}, seed));
+      added = true;
+    }
+  }
+  if (added) state.entries.sort((a, b) => (a.ts || 0) - (b.ts || 0));
+  return added;
+}
+
+// Direct localStorage write for the swimming seed merge — intentionally bypasses saveState()/
+// scheduleCloudPush(), since this runs during the init load loop before the sync machinery
+// (initialSyncDone etc.) has been declared further down in the script.
+function persistSwimmingLocally(state) {
+  try {
+    localStorage.setItem(TRACKERS.swimming.storageKey, JSON.stringify(state));
+  } catch (e) {
+    console.error('Swimming seed persist failed', e);
+  }
 }
 
 function loadState(key) {
@@ -1603,13 +2010,24 @@ function loadState(key) {
         s.entries.forEach(e => { if (e.source !== 'free') tachoSum += e.count; });
         s.lastTachoStand = offset + Math.round(tachoSum * 10) / 10;
       }
+      if (key === 'swimming') {
+        if (ensureSwimmingSeed(s)) persistSwimmingLocally(s);
+      }
     } else {
       states[key] = defaultState();
       if (key === 'cycling') states[key].lastTachoStand = 13363;
+      if (key === 'swimming') {
+        ensureSwimmingSeed(states[key]);
+        persistSwimmingLocally(states[key]);
+      }
     }
   } catch(e) {
     console.warn('Load failed for', key, e);
     states[key] = defaultState();
+    if (key === 'swimming') {
+      ensureSwimmingSeed(states[key]);
+      persistSwimmingLocally(states[key]);
+    }
   }
 }
 
@@ -1643,6 +2061,7 @@ if ('serviceWorker' in navigator) {
 
 // Load all states on init
 for (const key of Object.keys(TRACKERS)) loadState(key);
+loadChallengeLog();
 
 // ============================================================
 // FIREBASE SYNC — COMPLETELY REWRITTEN
@@ -1968,6 +2387,13 @@ function addDays(iso, n) {
   d.setDate(d.getDate() + n);
   return fmtDate(d);
 }
+function mondayOf(iso) {
+  const d = new Date(iso);
+  const day = d.getDay(); // 0=So..6=Sa
+  const diff = (day === 0 ? -6 : 1 - day);
+  d.setDate(d.getDate() + diff);
+  return fmtDate(d);
+}
 
 // ============================================================
 // STATS COMPUTATION
@@ -2218,19 +2644,31 @@ function setAccentColors(config) {
 
 function switchTab(trackerKey) {
   if (trackerKey === activeTracker) return;
-  // Save current
-  saveState(activeTracker);
+  // Save current (skip if leaving the Statistik tab, which has no own tracker state)
+  if (TRACKERS[activeTracker]) saveState(activeTracker);
   activeTracker = trackerKey;
   entriesCollapse = null;
-  const config = getConfig();
-
-  // Update accent colors
-  setAccentColors(config);
 
   // Update tab bar active state
   document.querySelectorAll('.tab').forEach(tab => {
     tab.classList.toggle('active', tab.dataset.tracker === trackerKey);
   });
+
+  if (trackerKey === 'stats') {
+    document.getElementById('trackerView').style.display = 'none';
+    document.getElementById('statsView').style.display = '';
+    setAccentColors(STATS_ACCENT);
+    document.getElementById('brandTitle').innerHTML = 'STATISTIK <span>&amp; PLAN</span>';
+    renderStats();
+    return;
+  }
+  document.getElementById('trackerView').style.display = '';
+  document.getElementById('statsView').style.display = 'none';
+
+  const config = getConfig();
+
+  // Update accent colors
+  setAccentColors(config);
 
   // Update brand title
   document.getElementById('brandTitle').innerHTML = config.title;
@@ -2269,6 +2707,7 @@ function switchTab(trackerKey) {
 // RENDER
 // ============================================================
 function render() {
+  if (activeTracker === 'stats') { renderStats(); return; }
   const stats = computeStats();
   const config = getConfig();
   const state = getState();
@@ -2701,6 +3140,394 @@ function renderBadge(b, stats) {
 }
 
 // ============================================================
+// STATISTICS TAB
+// Weekly/daily % of the combined sports plan + random daily program generator
+// ============================================================
+const TRACKER_ICONS = {
+  pushups: '💪', pullups: '🏋️', situps: '🔄', cycling: '🚴',
+  swimming: '🏊', steps: '👟', stretching: '🧘'
+};
+const STATS_ACCENT = { accent: '#22aaaa', accent2: '#55dddd' };
+
+// Build { trackerKey: { dateISO: totalCountThatDay } } across ALL trackers
+function statsBuildDailyTotals() {
+  const result = {};
+  for (const key of Object.keys(TRACKERS)) {
+    const byDate = {};
+    const entries = (states[key] && states[key].entries) || [];
+    for (const e of entries) {
+      byDate[e.date] = (byDate[e.date] || 0) + e.count;
+    }
+    result[key] = byDate;
+  }
+  return result;
+}
+
+// % of the combined daily plan achieved on a single date
+// (average across all tracker categories, equally weighted, in percentage points)
+function statsDailyPct(dailyTotals, iso) {
+  const keys = Object.keys(TRACKERS);
+  let sum = 0;
+  const perCat = {};
+  for (const key of keys) {
+    const tk = TRACKERS[key];
+    const amount = dailyTotals[key][iso] || 0;
+    const pct = (amount / tk.dailyBaseline) * 100;
+    perCat[key] = pct;
+    sum += pct;
+  }
+  return { overall: sum / keys.length, perCat };
+}
+
+// % of the combined weekly plan (Mon-Sun) achieved for the week starting at mondayIso
+function statsWeeklyPct(dailyTotals, mondayIso) {
+  const keys = Object.keys(TRACKERS);
+  let sum = 0;
+  const perCat = {};
+  for (const key of keys) {
+    const tk = TRACKERS[key];
+    let weekTotal = 0;
+    for (let i = 0; i < 7; i++) {
+      weekTotal += dailyTotals[key][addDays(mondayIso, i)] || 0;
+    }
+    const pct = (weekTotal / (tk.dailyBaseline * 7)) * 100;
+    perCat[key] = pct;
+    sum += pct;
+  }
+  return { overall: sum / keys.length, perCat };
+}
+
+// Earliest entry date across all trackers, or null if nothing tracked yet
+function statsEarliestDate(dailyTotals) {
+  let earliest = null;
+  for (const key of Object.keys(TRACKERS)) {
+    for (const d of Object.keys(dailyTotals[key])) {
+      if (!earliest || d < earliest) earliest = d;
+    }
+  }
+  return earliest;
+}
+
+function renderStats() {
+  const dailyTotals = statsBuildDailyTotals();
+  const earliest = statsEarliestDate(dailyTotals);
+  const today = todayISO();
+
+  // Hydrate today's rolled challenge from the persisted log (survives page reloads)
+  if (!currentPlan && challengeLog[today]) currentPlan = challengeLog[today].plan;
+
+  // ---- WEEKLY ----
+  const curMonday = mondayOf(today);
+  const curWeek = statsWeeklyPct(dailyTotals, curMonday);
+  document.getElementById('statsWeekPct').textContent = curWeek.overall.toFixed(1) + '%';
+  document.getElementById('statsWeekRange').textContent = fmtDateDe(curMonday) + '–' + fmtDateDe(addDays(curMonday, 6));
+  document.getElementById('statsWeekBarFill').style.width = Math.min(100, curWeek.overall) + '%';
+
+  document.getElementById('statsWeekCatGrid').innerHTML = Object.keys(TRACKERS).map(key => {
+    const tk = TRACKERS[key];
+    const pct = curWeek.perCat[key];
+    return `<div class="stats-cat">
+      <div class="stats-cat-name">${TRACKER_ICONS[key] || ''} ${tk.unit}</div>
+      <div class="stats-cat-pct">${pct.toFixed(0)}%</div>
+    </div>`;
+  }).join('');
+
+  const weekList = document.getElementById('statsWeekList');
+  if (!earliest) {
+    weekList.innerHTML = '<div class="empty">Noch keine Einträge — leg los!</div>';
+  } else {
+    const startMonday = mondayOf(earliest);
+    const mondays = [];
+    let cursor = curMonday;
+    while (cursor >= startMonday) {
+      mondays.push(cursor);
+      cursor = addDays(cursor, -7);
+    }
+    const shown = mondays.slice(0, 12);
+    const WEEKDAY_SHORT = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+    weekList.innerHTML = shown.map(m => {
+      const w = statsWeeklyPct(dailyTotals, m);
+      const barColor = w.overall >= 100 ? 'var(--success)' : 'var(--accent)';
+
+      // Individual days of this week (Mon-Sun)
+      const daysHtml = Array.from({ length: 7 }, (_, i) => {
+        const d = addDays(m, i);
+        const dp = statsDailyPct(dailyTotals, d).overall;
+        const wd = WEEKDAY_SHORT[new Date(d).getDay()];
+        const dBarColor = dp >= 100 ? 'var(--success)' : 'var(--accent)';
+        return `<div class="stats-mini-day-row">
+          <div class="stats-mini-day-date">${wd} ${fmtDateDe(d).slice(0, 5)}</div>
+          <div class="stats-row-bar-wrap small"><div class="stats-row-bar-fill" style="width:${Math.min(100, dp)}%;background:${dBarColor}"></div></div>
+          <div class="stats-mini-day-pct">${dp.toFixed(0)}%</div>
+        </div>`;
+      }).join('');
+
+      const catGridHtml = Object.keys(TRACKERS).map(key => {
+        const tk = TRACKERS[key];
+        return `<div class="stats-cat">
+          <div class="stats-cat-name">${TRACKER_ICONS[key] || ''} ${tk.unit}</div>
+          <div class="stats-cat-pct">${w.perCat[key].toFixed(0)}%</div>
+        </div>`;
+      }).join('');
+
+      return `<div class="stats-week-row">
+        <div class="stats-row-main">
+          <div class="stats-row-date">${fmtDateDe(m)}&ndash;${fmtDateDe(addDays(m, 6))}</div>
+          <div class="stats-row-bar-wrap"><div class="stats-row-bar-fill" style="width:${Math.min(100, w.overall)}%;background:${barColor}"></div></div>
+          <div class="stats-row-pct">${w.overall.toFixed(1)}%</div>
+          <div class="stats-row-caret">&#9662;</div>
+        </div>
+        <div class="stats-row-detail">
+          <div class="stats-detail-label">Tage dieser Woche</div>
+          <div class="stats-mini-days">${daysHtml}</div>
+          <div class="stats-detail-label">Kategorien dieser Woche</div>
+          <div class="stats-cat-grid">${catGridHtml}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // ---- DAILY ----
+  const dayList = document.getElementById('statsDayList');
+  if (!earliest) {
+    dayList.innerHTML = '<div class="empty">Noch keine Einträge — leg los!</div>';
+  } else {
+    // All-time average daily % (every day from the very first entry to today, inactive days count as 0%)
+    const span = daysBetween(earliest, today) + 1;
+    let sumPct = 0;
+    const dailyPctCache = {};
+    for (let i = 0; i < span; i++) {
+      const d = addDays(earliest, i);
+      const p = statsDailyPct(dailyTotals, d).overall;
+      dailyPctCache[d] = p;
+      sumPct += p;
+    }
+    const avgPct = sumPct / span;
+
+    const showDays = Math.min(30, span);
+    let rows = '';
+    for (let i = 0; i < showDays; i++) {
+      const d = addDays(today, -i);
+      const p = dailyPctCache[d] !== undefined ? dailyPctCache[d] : statsDailyPct(dailyTotals, d).overall;
+      let tagClass = 'avg', tagText = '&#8776; Durchschnitt';
+      if (p > avgPct + 2) { tagClass = 'above'; tagText = '&#8593; überdurchschnittlich'; }
+      else if (p < avgPct - 2) { tagClass = 'below'; tagText = '&#8595; unterdurchschnittlich'; }
+      const barColor = p >= 100 ? 'var(--success)' : 'var(--accent)';
+      rows += `<div class="stats-day-row">
+        <div class="stats-row-date">${fmtDateDe(d)}</div>
+        <div class="stats-row-bar-wrap"><div class="stats-row-bar-fill" style="width:${Math.min(100, p)}%;background:${barColor}"></div></div>
+        <div class="stats-row-pct">${p.toFixed(0)}%</div>
+        <div class="stats-tag ${tagClass}">${tagText}</div>
+      </div>`;
+    }
+    dayList.innerHTML = rows || '<div class="empty">Noch keine Einträge — leg los!</div>';
+  }
+
+  renderGenerator();
+}
+
+// ---- RANDOM DAILY PROGRAM GENERATOR ----
+let currentPlan = null;
+
+function statsRoundNicely(key, amount) {
+  switch (key) {
+    case 'pushups': return { value: Math.max(5, Math.round(amount / 5) * 5), unit: 'Liegestütze' };
+    case 'pullups': return { value: Math.max(2, Math.round(amount / 2) * 2), unit: 'Klimmzüge' };
+    case 'situps': return { value: Math.max(10, Math.round(amount / 10) * 10), unit: 'Situps' };
+    case 'cycling': return { value: Math.max(0.5, Math.round(amount / 0.5) * 0.5), unit: 'km Radfahren' };
+    case 'swimming': {
+      const m = Math.max(50, Math.round((amount * 1000) / 50) * 50);
+      return { value: m, unit: 'm Schwimmen' };
+    }
+    case 'steps': return { value: Math.max(500, Math.round(amount / 500) * 500), unit: 'Schritte' };
+    case 'stretching': return { value: Math.max(5, Math.round(amount / 5) * 5), unit: 'Min. Dehnen' };
+    default: return { value: Math.round(amount), unit: TRACKERS[key].unit };
+  }
+}
+
+function rollWorkout() {
+  const keys = Object.keys(TRACKERS);
+  const N = keys.length;
+
+  // 1) How many categories today? Weighted toward 2-3, but sometimes just 1 or many.
+  const weightsAll = [0.16, 0.28, 0.27, 0.15, 0.08, 0.04, 0.02];
+  const wSlice = weightsAll.slice(0, N);
+  const wSum = wSlice.reduce((a, b) => a + b, 0);
+  let r = Math.random() * wSum;
+  let k = 1;
+  for (let i = 0; i < wSlice.length; i++) {
+    if (r < wSlice[i]) { k = i + 1; break; }
+    r -= wSlice[i];
+  }
+
+  // 2) Pick k random distinct categories
+  const shuffled = keys.slice().sort(() => Math.random() - 0.5);
+  const chosen = shuffled.slice(0, k);
+
+  // 3) Total daily "budget" in baseline-units, randomized so not every day is maxed out
+  const totalBudget = N * (0.7 + Math.random() * 0.5); // between 0.7N and 1.2N units
+
+  // 4) Random split of the budget across chosen categories (exponential sampling => uneven, realistic split)
+  const raw = chosen.map(() => -Math.log(Math.max(0.0001, Math.random())));
+  const rawSum = raw.reduce((a, b) => a + b, 0) || 1;
+  let mult = raw.map(x => (x / rawSum) * totalBudget);
+
+  // 5) Hard cap per category at N× baseline (never more than "avg × Anzahl Kategorien"), floor so nothing is silly-small
+  mult = mult.map(m => Math.min(N, Math.max(0.35, m)));
+
+  currentPlan = chosen.map((key, i) => {
+    const tk = TRACKERS[key];
+    const rawAmount = mult[i] * tk.dailyBaseline;
+    const rounded = statsRoundNicely(key, rawAmount);
+    return { key, icon: TRACKER_ICONS[key] || '🏆', amount: rounded.value, unit: rounded.unit };
+  });
+
+  // Persist today's roll — undecided (completed:null) until the user marks it done/not done
+  const today = todayISO();
+  challengeLog[today] = { plan: currentPlan, completed: null, rolledAt: Date.now(), decidedAt: null };
+  saveChallengeLog();
+}
+
+// ---- CHALLENGE COMPLETION TRACKING ----
+// (challengeLog itself is declared earlier, alongside `states`, so it's ready before init calls loadChallengeLog())
+
+function loadChallengeLog() {
+  try {
+    const raw = localStorage.getItem('daily_challenge_log_v1');
+    challengeLog = raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    console.warn('Challenge log load failed', e);
+    challengeLog = {};
+  }
+}
+
+function saveChallengeLog() {
+  try {
+    localStorage.setItem('daily_challenge_log_v1', JSON.stringify(challengeLog));
+  } catch (e) {
+    console.error('Challenge log save failed', e);
+  }
+}
+
+function decideChallenge(done) {
+  const today = todayISO();
+  if (!challengeLog[today]) return;
+  challengeLog[today].completed = done;
+  challengeLog[today].decidedAt = Date.now();
+  saveChallengeLog();
+  renderGenerator();
+}
+
+function resetTodayChallenge() {
+  const today = todayISO();
+  if (!challengeLog[today]) return;
+  challengeLog[today].completed = null;
+  challengeLog[today].decidedAt = null;
+  saveChallengeLog();
+  currentPlan = challengeLog[today].plan;
+  renderGenerator();
+}
+
+// Count decided challenges (done vs. total) for the current week and all-time
+function challengeStats() {
+  const today = todayISO();
+  const monday = mondayOf(today);
+  const sunday = addDays(monday, 6);
+  let weekDone = 0, weekDecided = 0, totalDone = 0, totalDecided = 0;
+  for (const d of Object.keys(challengeLog)) {
+    const c = challengeLog[d];
+    if (c.completed !== true && c.completed !== false) continue;
+    totalDecided++;
+    if (c.completed) totalDone++;
+    if (d >= monday && d <= sunday) {
+      weekDecided++;
+      if (c.completed) weekDone++;
+    }
+  }
+  return { weekDone, weekDecided, totalDone, totalDecided };
+}
+
+function renderChallengeStats() {
+  const statsEl = document.getElementById('genStats');
+  if (!statsEl) return;
+  const s = challengeStats();
+  if (s.totalDecided === 0) {
+    statsEl.innerHTML = '';
+    return;
+  }
+  statsEl.innerHTML = `
+    <div class="gen-stat-row"><strong>${s.weekDone} / ${s.weekDecided}</strong><span>Diese Woche geschafft</span></div>
+    <div class="gen-stat-row"><strong>${s.totalDone} / ${s.totalDecided}</strong><span>Insgesamt geschafft</span></div>
+  `;
+}
+
+function rebindGenBtn() {
+  const btn = document.getElementById('genBtn');
+  if (btn) btn.addEventListener('click', () => { rollWorkout(); renderGenerator(); });
+}
+
+function renderGenerator() {
+  const empty = document.getElementById('genEmpty');
+  const itemsEl = document.getElementById('genItems');
+  const actions = document.getElementById('genActions');
+  const decisionEl = document.getElementById('genDecision');
+  const statusEl = document.getElementById('genStatus');
+  const note = document.getElementById('genNote');
+  if (!empty || !itemsEl || !actions || !decisionEl || !statusEl || !note) return;
+
+  const today = todayISO();
+  const entry = challengeLog[today];
+
+  if (!currentPlan) {
+    empty.style.display = '';
+    itemsEl.innerHTML = '';
+    actions.innerHTML = '<button class="btn-primary" id="genBtn">&#x1F3B2; Würfeln</button>';
+    decisionEl.style.display = 'none';
+    statusEl.style.display = 'none';
+    note.textContent = '';
+    rebindGenBtn();
+    renderChallengeStats();
+    return;
+  }
+
+  empty.style.display = 'none';
+  itemsEl.innerHTML = currentPlan.map(p => `
+    <div class="gen-item">
+      <div class="gen-item-icon">${p.icon}</div>
+      <div class="gen-item-amount">${p.amount.toLocaleString('de-DE')}</div>
+      <div class="gen-item-unit">${p.unit}</div>
+    </div>
+  `).join('');
+
+  const decided = entry && (entry.completed === true || entry.completed === false);
+
+  if (decided) {
+    actions.innerHTML = '';
+    decisionEl.style.display = 'none';
+    statusEl.style.display = '';
+    const when = entry.decidedAt ? new Date(entry.decidedAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : '';
+    statusEl.innerHTML = (entry.completed
+      ? '<span class="gen-status-badge done">&#x2705; Heute geschafft</span>'
+      : '<span class="gen-status-badge fail">&#x274C; Heute nicht geschafft</span>')
+      + (when ? ` <span class="gen-status-time">${when} Uhr</span>` : '')
+      + ' <button class="btn-small" id="genResetBtn">&#8635; Zurücksetzen</button>';
+    note.textContent = '';
+    const resetBtn = document.getElementById('genResetBtn');
+    if (resetBtn) resetBtn.addEventListener('click', resetTodayChallenge);
+  } else {
+    actions.innerHTML = '<button class="btn-primary" id="genBtn">&#x1F3B2; Neu würfeln</button>';
+    decisionEl.style.display = '';
+    statusEl.style.display = 'none';
+    note.textContent = currentPlan.length === 1
+      ? 'Heute volle Konzentration auf eine Kategorie.'
+      : `Kombiniert aus ${currentPlan.length} Kategorien.`;
+    rebindGenBtn();
+  }
+
+  renderChallengeStats();
+}
+
+// ============================================================
 // ACTIONS
 // ============================================================
 function addEntry(count, date, source) {
@@ -2849,6 +3676,7 @@ document.getElementById('inputFreeKm').addEventListener('keydown', e => {
 });
 
 document.getElementById('resetBtn').addEventListener('click', () => {
+  if (!TRACKERS[activeTracker]) { alert('Bitte wähle zuerst einen Tracker aus.'); return; }
   const cfg = getConfig();
   if (confirm('Wirklich ALLE Daten für ' + cfg.unit + ' löschen? Das kann nicht rückgängig gemacht werden.')) {
     localStorage.removeItem(cfg.storageKey);
@@ -2859,6 +3687,7 @@ document.getElementById('resetBtn').addEventListener('click', () => {
 });
 
 document.getElementById('exportBtn').addEventListener('click', () => {
+  if (!TRACKERS[activeTracker]) { alert('Bitte wähle zuerst einen Tracker aus.'); return; }
   const state = getState();
   const cfg = getConfig();
   const exportData = Object.assign({}, state, {tracker: activeTracker});
@@ -2887,6 +3716,7 @@ document.getElementById('importFile').addEventListener('change', e => {
       if (data.tracker && TRACKERS[data.tracker]) {
         targetKey = data.tracker;
       }
+      if (!TRACKERS[targetKey]) { alert('Bitte wähle zuerst einen Tracker aus, bevor du importierst.'); return; }
       const cfg = TRACKERS[targetKey];
       if (confirm(`Import für ${cfg.unit}: ${data.entries.length} Einträge, ${Object.keys(data.badges||{}).length} Badges. Bestehende Daten werden überschrieben.`)) {
         delete data.tracker;
@@ -2914,6 +3744,17 @@ document.getElementById('importFile').addEventListener('change', e => {
 });
 
 document.getElementById('authBtn').addEventListener('click', showSyncSetup);
+
+document.getElementById('genDoneBtn').addEventListener('click', () => decideChallenge(true));
+document.getElementById('genFailBtn').addEventListener('click', () => decideChallenge(false));
+
+// Expandable category breakdown per week row (delegated click)
+document.getElementById('statsWeekList').addEventListener('click', (e) => {
+  const main = e.target.closest('.stats-row-main');
+  if (!main) return;
+  const row = main.closest('.stats-week-row');
+  if (row) row.classList.toggle('open');
+});
 
 // Init sync UI
 updateSyncUI();
