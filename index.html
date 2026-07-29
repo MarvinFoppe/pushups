@@ -1164,6 +1164,54 @@
     color: var(--text-faint);
     margin-top: 8px;
   }
+  .gen-avail { margin-bottom: 20px; }
+  .gen-avail-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 10px;
+  }
+  .gen-avail-chips { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .gen-chip {
+    padding: 16px 24px;
+    font-size: 15px;
+    font-weight: 700;
+    border: 2px solid var(--border);
+    background: var(--bg-elev-2);
+    color: var(--text-faint);
+    opacity: 0.5;
+    transition: all 0.15s;
+  }
+  .gen-chip.active {
+    opacity: 1;
+    color: var(--text);
+    border-color: var(--accent);
+    background: rgba(255,255,255,0.06);
+  }
+  .gen-chip:hover { opacity: 0.85; }
+  .gen-chip.active:hover { opacity: 1; }
+  .gen-progress { margin: 0 auto 18px; max-width: 380px; }
+  .gen-progress-bar {
+    height: 10px;
+    background: #48484f;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+  }
+  .gen-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    transition: width 0.4s;
+  }
+  .gen-progress-fill.complete { background: var(--success); }
+  .gen-progress-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-faint);
+    text-align: center;
+    margin-top: 6px;
+  }
   .gen-actions { margin: 4px 0 8px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
   .gen-actions .btn-primary { max-width: 220px; }
   .gen-checklist {
@@ -1227,6 +1275,7 @@
     .stats-row-date { min-width: 96px; font-size: 10px; }
     .stats-tag { min-width: 88px; font-size: 8px; }
     .gen-stats { gap: 20px; }
+    .gen-chip { padding: 14px 18px; font-size: 14px; flex: 1 1 calc(50% - 10px); }
   }
 
 </style>
@@ -1442,8 +1491,16 @@
         <div class="section-title"><span class="section-title-accent">&#x203A;</span> Tages-Programm-Generator</div>
       </div>
       <div class="gen-card">
+        <div class="gen-avail" id="genAvail">
+          <div class="gen-avail-label">Was ist heute möglich? (antippen zum An-/Abwählen)</div>
+          <div class="gen-avail-chips" id="genAvailChips"></div>
+        </div>
         <div class="gen-empty" id="genEmpty">Klick auf &bdquo;Würfeln&ldquo; für dein zufälliges Tagesprogramm.</div>
         <div class="gen-items" id="genItems"></div>
+        <div class="gen-progress" id="genProgress" style="display:none">
+          <div class="gen-progress-bar"><div class="gen-progress-fill" id="genProgressFill" style="width:0%"></div></div>
+          <div class="gen-progress-label" id="genProgressLabel">0%</div>
+        </div>
         <div class="gen-checklist" id="genChecklist"></div>
         <div class="gen-actions" id="genActions"></div>
         <div class="gen-status" id="genStatus" style="display:none"></div>
@@ -1932,6 +1989,7 @@ const CATEGORIES = [
 let activeTracker = 'pushups';
 let states = {};
 let challengeLog = {}; // daily program-generator challenge history (declared early: loaded during init, below)
+let availableCategories = new Set(); // categories the user says they can do today (declared early, same reason)
 
 function defaultState() {
   return {
@@ -2060,6 +2118,7 @@ if ('serviceWorker' in navigator) {
 // Load all states on init
 for (const key of Object.keys(TRACKERS)) loadState(key);
 loadChallengeLog();
+loadAvailableCategories();
 
 // ============================================================
 // FIREBASE SYNC — COMPLETELY REWRITTEN
@@ -3145,6 +3204,10 @@ const TRACKER_ICONS = {
   pushups: '💪', pullups: '🏋️', situps: '🔄', cycling: '🚴',
   swimming: '🏊', steps: '👟', stretching: '🧘'
 };
+const DISCIPLINE_NAMES = {
+  pushups: 'Liegestütze', pullups: 'Klimmzüge', situps: 'Situps', cycling: 'Fahrrad',
+  swimming: 'Schwimmen', steps: 'Schritte', stretching: 'Dehnen'
+};
 const STATS_ACCENT = { accent: '#22aaaa', accent2: '#55dddd' };
 
 // Build { trackerKey: { dateISO: totalCountThatDay } } across ALL trackers
@@ -3341,7 +3404,9 @@ function statsRoundNicely(key, amount) {
 }
 
 function rollWorkout() {
-  const keys = Object.keys(TRACKERS);
+  // Only draw from categories the user marked as doable today (falls back to all if somehow empty)
+  const keys = Array.from(availableCategories).filter(k => TRACKERS[k]);
+  if (keys.length === 0) return;
   const N = keys.length;
 
   // 1) How many categories today? Weighted toward 2-3, but sometimes just 1 or many.
@@ -3400,6 +3465,56 @@ function saveChallengeLog() {
   }
 }
 
+// Which categories the user says they can actually do today — resets to "all available" each new day
+function loadAvailableCategories() {
+  try {
+    const raw = localStorage.getItem('available_categories_v1');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed.date === todayISO() && Array.isArray(parsed.keys)) {
+        const keys = parsed.keys.filter(k => TRACKERS[k]);
+        if (keys.length > 0) {
+          availableCategories = new Set(keys);
+          return;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Available categories load failed', e);
+  }
+  availableCategories = new Set(Object.keys(TRACKERS));
+}
+
+function saveAvailableCategories() {
+  try {
+    localStorage.setItem('available_categories_v1', JSON.stringify({ date: todayISO(), keys: Array.from(availableCategories) }));
+  } catch (e) {
+    console.error('Available categories save failed', e);
+  }
+}
+
+function toggleAvailableCategory(key) {
+  if (!TRACKERS[key]) return;
+  if (availableCategories.has(key)) {
+    if (availableCategories.size === 1) return; // keep at least one selectable
+    availableCategories.delete(key);
+  } else {
+    availableCategories.add(key);
+  }
+  saveAvailableCategories();
+  renderAvailChips();
+}
+
+function renderAvailChips() {
+  const el = document.getElementById('genAvailChips');
+  if (!el) return;
+  el.innerHTML = Object.keys(TRACKERS).map(key => {
+    const tk = TRACKERS[key];
+    const active = availableCategories.has(key);
+    return `<button type="button" class="gen-chip ${active ? 'active' : ''}" data-key="${key}">${TRACKER_ICONS[key] || ''} ${DISCIPLINE_NAMES[key] || tk.unit}</button>`;
+  }).join('');
+}
+
 // Lock in today's rolled plan. From this point on, completion is auto-checked (never manually set) —
 // including retroactively, if entries for that date get added/edited later.
 function acceptChallenge() {
@@ -3442,6 +3557,20 @@ function isChallengeMet(dateISO, plan) {
   });
 }
 
+// Overall completion % of a challenge on a given date — average of each item's own %
+// (each item capped at 100% so one wildly-overshot category doesn't hide unfinished ones)
+function challengeProgressPct(dateISO, plan) {
+  if (!plan || plan.length === 0) return 0;
+  let sum = 0;
+  for (const item of plan) {
+    const entries = (states[item.key] && states[item.key].entries) || [];
+    const actual = entries.filter(e => e.date === dateISO).reduce((s, e) => s + e.count, 0);
+    const required = requiredAmountFor(item);
+    sum += required > 0 ? Math.min(100, (actual / required) * 100) : 100;
+  }
+  return sum / plan.length;
+}
+
 // Count accepted challenges (met vs. total accepted) for the current week and all-time
 function challengeStats() {
   const today = todayISO();
@@ -3482,13 +3611,17 @@ function rebindGenBtn() {
 }
 
 function renderGenerator() {
+  const availEl = document.getElementById('genAvail');
   const empty = document.getElementById('genEmpty');
   const itemsEl = document.getElementById('genItems');
+  const progressEl = document.getElementById('genProgress');
+  const progressFill = document.getElementById('genProgressFill');
+  const progressLabel = document.getElementById('genProgressLabel');
   const checklistEl = document.getElementById('genChecklist');
   const actions = document.getElementById('genActions');
   const statusEl = document.getElementById('genStatus');
   const note = document.getElementById('genNote');
-  if (!empty || !itemsEl || !checklistEl || !actions || !statusEl || !note) return;
+  if (!availEl || !empty || !itemsEl || !progressEl || !checklistEl || !actions || !statusEl || !note) return;
 
   const today = todayISO();
   const entry = challengeLog[today];
@@ -3497,9 +3630,14 @@ function renderGenerator() {
   // Once accepted, today's locked-in plan always wins over whatever is in memory
   if (accepted) currentPlan = entry.plan;
 
+  // Category selector is only relevant before the challenge is locked in for today
+  availEl.style.display = accepted ? 'none' : '';
+  if (!accepted) renderAvailChips();
+
   if (!currentPlan) {
     empty.style.display = '';
     itemsEl.innerHTML = '';
+    progressEl.style.display = 'none';
     checklistEl.innerHTML = '';
     actions.innerHTML = '<button class="btn-primary" id="genBtn">&#x1F3B2; Würfeln</button>';
     statusEl.style.display = 'none';
@@ -3520,6 +3658,12 @@ function renderGenerator() {
 
   if (accepted) {
     // Auto-check: compare today's actual tracked entries per category against the plan
+    const pct = challengeProgressPct(today, currentPlan);
+    progressEl.style.display = '';
+    progressFill.style.width = Math.min(100, pct) + '%';
+    progressFill.classList.toggle('complete', pct >= 100);
+    progressLabel.textContent = pct.toFixed(0) + '% erreicht';
+
     checklistEl.innerHTML = currentPlan.map(p => {
       const entries = (states[p.key] && states[p.key].entries) || [];
       const actual = entries.filter(e => e.date === today).reduce((s, e) => s + e.count, 0);
@@ -3540,6 +3684,7 @@ function renderGenerator() {
     const resetBtn = document.getElementById('genResetBtn');
     if (resetBtn) resetBtn.addEventListener('click', resetTodayChallenge);
   } else {
+    progressEl.style.display = 'none';
     checklistEl.innerHTML = '';
     statusEl.style.display = 'none';
     actions.innerHTML = `
@@ -3777,6 +3922,13 @@ document.getElementById('importFile').addEventListener('change', e => {
 document.getElementById('authBtn').addEventListener('click', showSyncSetup);
 
 // (Accept / reroll / reset buttons for the challenge generator are wired dynamically in renderGenerator())
+
+// Toggle which categories are doable today (delegated click on the chip row)
+document.getElementById('genAvailChips').addEventListener('click', (e) => {
+  const chip = e.target.closest('.gen-chip');
+  if (!chip) return;
+  toggleAvailableCategory(chip.dataset.key);
+});
 
 // Expandable category breakdown per week row (delegated click)
 document.getElementById('statsWeekList').addEventListener('click', (e) => {
