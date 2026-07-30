@@ -3404,14 +3404,20 @@ function statsRoundNicely(key, amount) {
 }
 
 function rollWorkout() {
+  // TOTAL_N is always the full category count (all 7 disciplines) — the budget and the per-category
+  // cap are measured against this, NOT against how many are available today. That's what lets a
+  // single available category compensate for the rest, keeping the overall average intact.
+  const allKeys = Object.keys(TRACKERS);
+  const TOTAL_N = allKeys.length;
+
   // Only draw from categories the user marked as doable today (falls back to all if somehow empty)
   const keys = Array.from(availableCategories).filter(k => TRACKERS[k]);
   if (keys.length === 0) return;
-  const N = keys.length;
+  const availN = keys.length;
 
-  // 1) How many categories today? Weighted toward 2-3, but sometimes just 1 or many.
+  // 1) How many categories today? Weighted toward 2-3, but never more than are actually available.
   const weightsAll = [0.16, 0.28, 0.27, 0.15, 0.08, 0.04, 0.02];
-  const wSlice = weightsAll.slice(0, N);
+  const wSlice = weightsAll.slice(0, availN);
   const wSum = wSlice.reduce((a, b) => a + b, 0);
   let r = Math.random() * wSum;
   let k = 1;
@@ -3420,20 +3426,22 @@ function rollWorkout() {
     r -= wSlice[i];
   }
 
-  // 2) Pick k random distinct categories
+  // 2) Pick k random distinct categories from what's available today
   const shuffled = keys.slice().sort(() => Math.random() - 0.5);
   const chosen = shuffled.slice(0, k);
 
-  // 3) Total daily "budget" in baseline-units, randomized so not every day is maxed out
-  const totalBudget = N * (0.7 + Math.random() * 0.5); // between 0.7N and 1.2N units
+  // 3) Total daily "budget" always represents one full day of ALL 7 disciplines, randomized so not
+  // every day is maxed out. If fewer categories are available, this same budget concentrates into
+  // them (e.g. only 1 available -> that one can be asked to do up to ~7x its normal amount).
+  const totalBudget = TOTAL_N * (0.7 + Math.random() * 0.5); // between 0.7×TOTAL_N and 1.2×TOTAL_N units
 
   // 4) Random split of the budget across chosen categories (exponential sampling => uneven, realistic split)
   const raw = chosen.map(() => -Math.log(Math.max(0.0001, Math.random())));
   const rawSum = raw.reduce((a, b) => a + b, 0) || 1;
   let mult = raw.map(x => (x / rawSum) * totalBudget);
 
-  // 5) Hard cap per category at N× baseline (never more than "avg × Anzahl Kategorien"), floor so nothing is silly-small
-  mult = mult.map(m => Math.min(N, Math.max(0.35, m)));
+  // 5) Hard cap per category at TOTAL_N× baseline (never more than "avg × Gesamtzahl Kategorien"), floor so nothing is silly-small
+  mult = mult.map(m => Math.min(TOTAL_N, Math.max(0.35, m)));
 
   // Only sets currentPlan in-memory — nothing is persisted until the user explicitly accepts it
   currentPlan = chosen.map((key, i) => {
