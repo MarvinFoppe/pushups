@@ -928,12 +928,12 @@
 
   /* GLOBAL POLISH — softer, rounded, more scannable */
   .input-card, .entries-card, .chart-card, .bingo-card, .hero, .stats-hero,
-  .gen-card, .gen-item, .stats-cat, .badge, .btn-primary, .btn-small,
+  .stats-cat, .badge, .btn-primary, .btn-small,
   .btn-auth, .tab, input[type="number"], input[type="date"], .toast,
   .badge-cat, .btn-decide {
     border-radius: var(--radius);
   }
-  .stats-row-bar-wrap, .stats-bar, .stats-tag, .gen-status-badge {
+  .stats-row-bar-wrap, .stats-bar {
     border-radius: var(--radius-sm);
   }
   .section-header { margin-bottom: 18px; }
@@ -945,6 +945,13 @@
     padding: 24px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     margin-bottom: 16px;
+  }
+  .stats-hero-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
   }
   .stats-hero-row {
     display: flex;
@@ -965,6 +972,32 @@
     line-height: 1;
     color: var(--accent);
   }
+  .stats-badge-total {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    background: rgba(68,204,136,0.12);
+    border: 1px solid var(--success);
+    padding: 10px 18px;
+    border-radius: var(--radius);
+    min-width: 100px;
+  }
+  .stats-badge-total-icon { font-size: 22px; }
+  .stats-badge-total-count {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 24px;
+    color: var(--success);
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .stats-badge-total-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
   .stats-bar {
     height: 8px;
     background: #48484f;
@@ -976,6 +1009,26 @@
     height: 100%;
     background: linear-gradient(90deg, var(--accent), var(--accent-2));
     transition: width 0.4s;
+  }
+  .stats-week-complete-banner {
+    margin-top: 14px;
+    background: rgba(68,204,136,0.15);
+    border: 1px solid var(--success);
+    color: var(--success);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    letter-spacing: 0.05em;
+    text-align: center;
+    padding: 10px;
+    border-radius: var(--radius-sm);
+  }
+  .stats-hero-note {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-faint);
+    margin-top: 16px;
+    font-style: italic;
+    line-height: 1.5;
   }
   .stats-cat-grid {
     display: grid;
@@ -1004,15 +1057,6 @@
     font-size: 22px;
     color: var(--text);
   }
-  .stats-day-row {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 10px 8px;
-    border-bottom: 1px solid var(--border);
-  }
-  .stats-day-row:hover { background: rgba(255,255,255,0.03); border-radius: var(--radius-sm); }
-  .stats-day-row:last-child { border-bottom: none; }
 
   .stats-week-row {
     padding: 2px 0;
@@ -1036,6 +1080,13 @@
     flex-shrink: 0;
   }
   .stats-week-row.open .stats-row-caret { transform: rotate(180deg); color: var(--accent); }
+  .stats-week-row.complete .stats-row-pct { color: var(--success); }
+  .stats-row-badge {
+    font-size: 16px;
+    width: 22px;
+    text-align: center;
+    flex-shrink: 0;
+  }
   .stats-row-detail {
     display: none;
     padding: 4px 8px 16px;
@@ -1104,178 +1155,10 @@
     min-width: 58px;
     text-align: right;
   }
-  .stats-tag {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 9px;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    padding: 3px 8px;
-    border-radius: 3px;
-    white-space: nowrap;
-    min-width: 116px;
-    text-align: center;
-  }
-  .stats-tag.above { background: rgba(68,204,136,0.15); color: var(--success); }
-  .stats-tag.below { background: rgba(255,51,68,0.15); color: #ff5566; }
-  .stats-tag.avg { background: rgba(184,180,173,0.15); color: var(--text-faint); }
-
-  .gen-card {
-    background: var(--bg-elev);
-    border: 1px solid var(--border);
-    padding: 24px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    text-align: center;
-  }
-  .gen-empty {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
-    color: var(--text-faint);
-    margin-bottom: 16px;
-  }
-  .gen-items {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 12px;
-    margin: 0 0 20px;
-  }
-  .gen-item {
-    background: var(--bg-elev-2);
-    border: 1px solid var(--border);
-    padding: 16px 12px;
-  }
-  .gen-item-icon { font-size: 28px; margin-bottom: 6px; }
-  .gen-item-amount {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 26px;
-    color: var(--accent);
-    line-height: 1;
-  }
-  .gen-item-unit {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    color: var(--text-faint);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    margin-top: 4px;
-  }
-  .gen-note {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    color: var(--text-faint);
-    margin-top: 8px;
-  }
-  .gen-avail { margin-bottom: 20px; }
-  .gen-avail-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    margin-bottom: 10px;
-  }
-  .gen-avail-chips { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-  .gen-chip {
-    padding: 16px 24px;
-    font-size: 15px;
-    font-weight: 700;
-    border: 2px solid var(--border);
-    background: var(--bg-elev-2);
-    color: var(--text-faint);
-    opacity: 0.5;
-    transition: all 0.15s;
-  }
-  .gen-chip.active {
-    opacity: 1;
-    color: var(--text);
-    border-color: var(--accent);
-    background: rgba(255,255,255,0.06);
-  }
-  .gen-chip:hover { opacity: 0.85; }
-  .gen-chip.active:hover { opacity: 1; }
-  .gen-progress { margin: 0 auto 18px; max-width: 380px; }
-  .gen-progress-bar {
-    height: 10px;
-    background: #48484f;
-    border-radius: var(--radius-sm);
-    overflow: hidden;
-  }
-  .gen-progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--accent), var(--accent-2));
-    transition: width 0.4s;
-  }
-  .gen-progress-fill.complete { background: var(--success); }
-  .gen-progress-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    color: var(--text-faint);
-    text-align: center;
-    margin-top: 6px;
-  }
-  .gen-actions { margin: 4px 0 8px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
-  .gen-actions .btn-primary { max-width: 220px; }
-  .gen-checklist {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    max-width: 380px;
-    margin: 0 auto 18px;
-  }
-  .gen-check-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    background: var(--bg-elev-2);
-    border: 1px solid var(--border);
-    padding: 8px 12px;
-    border-radius: var(--radius-sm);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    color: var(--text-dim);
-    text-align: left;
-    transition: all 0.3s;
-  }
-  .gen-check-row.met { border-color: var(--success); color: var(--text); background: rgba(68,204,136,0.08); }
-  .gen-check-icon { font-size: 14px; flex-shrink: 0; }
-  .gen-status { margin: 4px 0 16px; display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; }
-  .gen-status-badge {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    padding: 6px 12px;
-  }
-  .gen-status-badge.done { background: rgba(68,204,136,0.15); color: var(--success); }
-  .gen-status-badge.pending { background: rgba(184,180,173,0.15); color: var(--text-faint); }
-  .gen-status-time { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-faint); }
-  .gen-stats {
-    margin-top: 18px;
-    padding-top: 16px;
-    border-top: 1px solid var(--border);
-    display: flex;
-    gap: 32px;
-    justify-content: center;
-    flex-wrap: wrap;
-  }
-  .gen-stat-row { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-  .gen-stat-row span {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    color: var(--text-faint);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-  }
-  .gen-stat-row strong {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 26px;
-    color: var(--accent);
-  }
   @media (max-width: 600px) {
     .stats-big { font-size: 40px; }
     .stats-row-date { min-width: 96px; font-size: 10px; }
-    .stats-tag { min-width: 88px; font-size: 8px; }
-    .gen-stats { gap: 20px; }
-    .gen-chip { padding: 14px 18px; font-size: 14px; flex: 1 1 calc(50% - 10px); }
+    .stats-badge-total { padding: 8px 14px; min-width: 74px; }
   }
 
 </style>
@@ -1466,47 +1349,25 @@
         <div class="section-title"><span class="section-title-accent">&#x203A;</span> Wochenübersicht <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-faint);text-transform:none;letter-spacing:0;margin-left:8px">Mo&ndash;So</span></div>
       </div>
       <div class="stats-hero">
-        <div class="stats-big-label">Diese Woche geschafft</div>
-        <div class="stats-hero-row">
-          <div class="stats-big" id="statsWeekPct">0%</div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-faint)" id="statsWeekRange">&mdash;</div>
+        <div class="stats-hero-top">
+          <div>
+            <div class="stats-big-label">Diese Woche geschafft</div>
+            <div class="stats-hero-row">
+              <div class="stats-big" id="statsWeekPct">0%</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-faint)" id="statsWeekRange">&mdash;</div>
+            </div>
+          </div>
+          <div class="stats-badge-total" id="statsBadgeTotal" style="display:none">
+            <div class="stats-badge-total-icon">&#127942;</div>
+            <div class="stats-badge-total-count" id="statsBadgeTotalCount">0</div>
+            <div class="stats-badge-total-label">Wochenbadges</div>
+          </div>
         </div>
         <div class="stats-bar"><div class="stats-bar-fill" id="statsWeekBarFill" style="width:0%"></div></div>
+        <div class="stats-week-complete-banner" id="statsWeekBadge" style="display:none">&#127942; Woche geschafft!</div>
         <div class="stats-cat-grid" id="statsWeekCatGrid"></div>
       </div>
       <div class="entries-card" id="statsWeekList"></div>
-    </div>
-
-    <!-- DAILY BREAKDOWN -->
-    <div class="section">
-      <div class="section-header">
-        <div class="section-title"><span class="section-title-accent">&#x203A;</span> Tagesübersicht <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-faint);text-transform:none;letter-spacing:0;margin-left:8px">letzte 30 Tage</span></div>
-      </div>
-      <div class="entries-card" id="statsDayList"></div>
-    </div>
-
-    <!-- RANDOM DAILY PROGRAM GENERATOR -->
-    <div class="section">
-      <div class="section-header">
-        <div class="section-title"><span class="section-title-accent">&#x203A;</span> Tages-Programm-Generator</div>
-      </div>
-      <div class="gen-card">
-        <div class="gen-avail" id="genAvail">
-          <div class="gen-avail-label">Was ist heute möglich? (antippen zum An-/Abwählen)</div>
-          <div class="gen-avail-chips" id="genAvailChips"></div>
-        </div>
-        <div class="gen-empty" id="genEmpty">Klick auf &bdquo;Würfeln&ldquo; für dein zufälliges Tagesprogramm.</div>
-        <div class="gen-items" id="genItems"></div>
-        <div class="gen-progress" id="genProgress" style="display:none">
-          <div class="gen-progress-bar"><div class="gen-progress-fill" id="genProgressFill" style="width:0%"></div></div>
-          <div class="gen-progress-label" id="genProgressLabel">0%</div>
-        </div>
-        <div class="gen-checklist" id="genChecklist"></div>
-        <div class="gen-actions" id="genActions"></div>
-        <div class="gen-status" id="genStatus" style="display:none"></div>
-        <div class="gen-note" id="genNote"></div>
-        <div class="gen-stats" id="genStats"></div>
-      </div>
     </div>
 
   </div>
@@ -1988,8 +1849,6 @@ const CATEGORIES = [
 // ============================================================
 let activeTracker = 'pushups';
 let states = {};
-let challengeLog = {}; // daily program-generator challenge history (declared early: loaded during init, below)
-let availableCategories = new Set(); // categories the user says they can do today (declared early, same reason)
 
 function defaultState() {
   return {
@@ -2117,8 +1976,6 @@ if ('serviceWorker' in navigator) {
 
 // Load all states on init
 for (const key of Object.keys(TRACKERS)) loadState(key);
-loadChallengeLog();
-loadAvailableCategories();
 
 // ============================================================
 // FIREBASE SYNC — COMPLETELY REWRITTEN
@@ -3198,16 +3055,14 @@ function renderBadge(b, stats) {
 
 // ============================================================
 // STATISTICS TAB
-// Weekly/daily % of the combined sports plan + random daily program generator
+// Weekly average (with cross-category compensation) vs. the combined sports plan + week badges
 // ============================================================
 const TRACKER_ICONS = {
   pushups: '💪', pullups: '🏋️', situps: '🔄', cycling: '🚴',
   swimming: '🏊', steps: '👟', stretching: '🧘'
 };
-const DISCIPLINE_NAMES = {
-  pushups: 'Liegestütze', pullups: 'Klimmzüge', situps: 'Situps', cycling: 'Fahrrad',
-  swimming: 'Schwimmen', steps: 'Schritte', stretching: 'Dehnen'
-};
+// Weeks are only evaluated (and can earn a badge) from this Monday onward — everything before is ignored.
+const STATS_START_MONDAY = '2026-08-03';
 const STATS_ACCENT = { accent: '#22aaaa', accent2: '#55dddd' };
 
 // Build { trackerKey: { dateISO: totalCountThatDay } } across ALL trackers
@@ -3258,28 +3113,41 @@ function statsWeeklyPct(dailyTotals, mondayIso) {
   return { overall: sum / keys.length, perCat };
 }
 
-// Earliest entry date across all trackers, or null if nothing tracked yet
-function statsEarliestDate(dailyTotals) {
-  let earliest = null;
-  for (const key of Object.keys(TRACKERS)) {
-    for (const d of Object.keys(dailyTotals[key])) {
-      if (!earliest || d < earliest) earliest = d;
-    }
+// A week (given by its Monday) is "geschafft" once the overall average across ALL categories
+// reaches 100% — categories compensate each other freely (that's what statsWeeklyPct's average does).
+function isWeekComplete(dailyTotals, mondayIso) {
+  return statsWeeklyPct(dailyTotals, mondayIso).overall >= 100 - 1e-9;
+}
+
+// How many Wochenbadges have been earned vs. how many weeks have counted at all,
+// from STATS_START_MONDAY up to (and including) uptoMondayIso — e.g. {earned:1, total:2} after 2 weeks.
+function countWeekBadges(dailyTotals, uptoMondayIso) {
+  let earned = 0, total = 0;
+  let cursor = STATS_START_MONDAY;
+  while (cursor <= uptoMondayIso) {
+    total++;
+    if (isWeekComplete(dailyTotals, cursor)) earned++;
+    cursor = addDays(cursor, 7);
   }
-  return earliest;
+  return { earned, total };
 }
 
 function renderStats() {
   const dailyTotals = statsBuildDailyTotals();
-  const earliest = statsEarliestDate(dailyTotals);
   const today = todayISO();
-
-  // ---- WEEKLY ----
   const curMonday = mondayOf(today);
+
+  // ---- CURRENT WEEK HERO ----
   const curWeek = statsWeeklyPct(dailyTotals, curMonday);
+  const curComplete = curWeek.overall >= 100 - 1e-9;
+  const curBarColor = curComplete ? 'var(--success)' : 'linear-gradient(90deg, var(--accent), var(--accent-2))';
+
   document.getElementById('statsWeekPct').textContent = curWeek.overall.toFixed(1) + '%';
   document.getElementById('statsWeekRange').textContent = fmtDateDe(curMonday) + '–' + fmtDateDe(addDays(curMonday, 6));
-  document.getElementById('statsWeekBarFill').style.width = Math.min(100, curWeek.overall) + '%';
+  const heroFill = document.getElementById('statsWeekBarFill');
+  heroFill.style.width = Math.min(100, curWeek.overall) + '%';
+  heroFill.style.background = curBarColor;
+  document.getElementById('statsWeekBadge').style.display = curComplete ? '' : 'none';
 
   document.getElementById('statsWeekCatGrid').innerHTML = Object.keys(TRACKERS).map(key => {
     const tk = TRACKERS[key];
@@ -3290,22 +3158,32 @@ function renderStats() {
     </div>`;
   }).join('');
 
+  // ---- WEEK LIST (only weeks from STATS_START_MONDAY onward count) ----
   const weekList = document.getElementById('statsWeekList');
-  if (!earliest) {
-    weekList.innerHTML = '<div class="empty">Noch keine Einträge — leg los!</div>';
+  const badgeTotalEl = document.getElementById('statsBadgeTotal');
+  const badgeTotalCountEl = document.getElementById('statsBadgeTotalCount');
+
+  if (curMonday < STATS_START_MONDAY) {
+    weekList.innerHTML = `<div class="empty">Die Wochenwertung startet ab ${fmtDateDe(STATS_START_MONDAY)}.</div>`;
+    badgeTotalEl.style.display = 'none';
   } else {
-    const startMonday = mondayOf(earliest);
     const mondays = [];
     let cursor = curMonday;
-    while (cursor >= startMonday) {
+    while (cursor >= STATS_START_MONDAY) {
       mondays.push(cursor);
       cursor = addDays(cursor, -7);
     }
-    const shown = mondays.slice(0, 12);
+
+    const badgeCount = countWeekBadges(dailyTotals, curMonday);
+    badgeTotalEl.style.display = '';
+    badgeTotalCountEl.textContent = badgeCount.earned + ' / ' + badgeCount.total;
+
+    const shown = mondays.slice(0, 20);
     const WEEKDAY_SHORT = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
     weekList.innerHTML = shown.map(m => {
       const w = statsWeeklyPct(dailyTotals, m);
-      const barColor = w.overall >= 100 ? 'var(--success)' : 'var(--accent)';
+      const complete = w.overall >= 100 - 1e-9;
+      const barColor = complete ? 'var(--success)' : 'var(--accent)';
 
       // Individual days of this week (Mon-Sun)
       const daysHtml = Array.from({ length: 7 }, (_, i) => {
@@ -3328,11 +3206,12 @@ function renderStats() {
         </div>`;
       }).join('');
 
-      return `<div class="stats-week-row">
+      return `<div class="stats-week-row ${complete ? 'complete' : ''}">
         <div class="stats-row-main">
           <div class="stats-row-date">${fmtDateDe(m)}&ndash;${fmtDateDe(addDays(m, 6))}</div>
           <div class="stats-row-bar-wrap"><div class="stats-row-bar-fill" style="width:${Math.min(100, w.overall)}%;background:${barColor}"></div></div>
           <div class="stats-row-pct">${w.overall.toFixed(1)}%</div>
+          <div class="stats-row-badge">${complete ? '&#127942;' : ''}</div>
           <div class="stats-row-caret">&#9662;</div>
         </div>
         <div class="stats-row-detail">
@@ -3344,371 +3223,6 @@ function renderStats() {
       </div>`;
     }).join('');
   }
-
-  // ---- DAILY ----
-  const dayList = document.getElementById('statsDayList');
-  if (!earliest) {
-    dayList.innerHTML = '<div class="empty">Noch keine Einträge — leg los!</div>';
-  } else {
-    // All-time average daily % (every day from the very first entry to today, inactive days count as 0%)
-    const span = daysBetween(earliest, today) + 1;
-    let sumPct = 0;
-    const dailyPctCache = {};
-    for (let i = 0; i < span; i++) {
-      const d = addDays(earliest, i);
-      const p = statsDailyPct(dailyTotals, d).overall;
-      dailyPctCache[d] = p;
-      sumPct += p;
-    }
-    const avgPct = sumPct / span;
-
-    const showDays = Math.min(30, span);
-    let rows = '';
-    for (let i = 0; i < showDays; i++) {
-      const d = addDays(today, -i);
-      const p = dailyPctCache[d] !== undefined ? dailyPctCache[d] : statsDailyPct(dailyTotals, d).overall;
-      let tagClass = 'avg', tagText = '&#8776; Durchschnitt';
-      if (p > avgPct + 2) { tagClass = 'above'; tagText = '&#8593; überdurchschnittlich'; }
-      else if (p < avgPct - 2) { tagClass = 'below'; tagText = '&#8595; unterdurchschnittlich'; }
-      const barColor = p >= 100 ? 'var(--success)' : 'var(--accent)';
-      rows += `<div class="stats-day-row">
-        <div class="stats-row-date">${fmtDateDe(d)}</div>
-        <div class="stats-row-bar-wrap"><div class="stats-row-bar-fill" style="width:${Math.min(100, p)}%;background:${barColor}"></div></div>
-        <div class="stats-row-pct">${p.toFixed(0)}%</div>
-        <div class="stats-tag ${tagClass}">${tagText}</div>
-      </div>`;
-    }
-    dayList.innerHTML = rows || '<div class="empty">Noch keine Einträge — leg los!</div>';
-  }
-
-  renderGenerator();
-}
-
-// ---- RANDOM DAILY PROGRAM GENERATOR ----
-let currentPlan = null;
-
-function statsRoundNicely(key, amount) {
-  switch (key) {
-    case 'pushups': { const v = Math.max(5, Math.round(amount / 5) * 5); return { value: v, unit: 'Liegestütze', native: v }; }
-    case 'pullups': { const v = Math.max(2, Math.round(amount / 2) * 2); return { value: v, unit: 'Klimmzüge', native: v }; }
-    case 'situps': { const v = Math.max(10, Math.round(amount / 10) * 10); return { value: v, unit: 'Situps', native: v }; }
-    case 'cycling': { const v = Math.max(0.5, Math.round(amount / 0.5) * 0.5); return { value: v, unit: 'km Radfahren', native: v }; }
-    case 'swimming': {
-      const m = Math.max(50, Math.round((amount * 1000) / 50) * 50);
-      return { value: m, unit: 'm Schwimmen', native: m / 1000 };
-    }
-    case 'steps': { const v = Math.max(500, Math.round(amount / 500) * 500); return { value: v, unit: 'Schritte', native: v }; }
-    case 'stretching': { const v = Math.max(5, Math.round(amount / 5) * 5); return { value: v, unit: 'Min. Dehnen', native: v }; }
-    default: { const v = Math.round(amount); return { value: v, unit: TRACKERS[key].unit, native: v }; }
-  }
-}
-
-function rollWorkout() {
-  // TOTAL_N is always the full category count (all 7 disciplines) — the budget and the per-category
-  // cap are measured against this, NOT against how many are available today. That's what lets a
-  // single available category compensate for the rest, keeping the overall average intact.
-  const allKeys = Object.keys(TRACKERS);
-  const TOTAL_N = allKeys.length;
-
-  // Only draw from categories the user marked as doable today (falls back to all if somehow empty)
-  const keys = Array.from(availableCategories).filter(k => TRACKERS[k]);
-  if (keys.length === 0) return;
-  const availN = keys.length;
-
-  // 1) How many categories today? Weighted toward 2-3, but never more than are actually available.
-  const weightsAll = [0.16, 0.28, 0.27, 0.15, 0.08, 0.04, 0.02];
-  const wSlice = weightsAll.slice(0, availN);
-  const wSum = wSlice.reduce((a, b) => a + b, 0);
-  let r = Math.random() * wSum;
-  let k = 1;
-  for (let i = 0; i < wSlice.length; i++) {
-    if (r < wSlice[i]) { k = i + 1; break; }
-    r -= wSlice[i];
-  }
-
-  // 2) Pick k random distinct categories from what's available today
-  const shuffled = keys.slice().sort(() => Math.random() - 0.5);
-  const chosen = shuffled.slice(0, k);
-
-  // 3) Total daily "budget" always represents one full day of ALL 7 disciplines, randomized so not
-  // every day is maxed out. If fewer categories are available, this same budget concentrates into
-  // them (e.g. only 1 available -> that one can be asked to do up to ~7x its normal amount).
-  const totalBudget = TOTAL_N * (0.7 + Math.random() * 0.5); // between 0.7×TOTAL_N and 1.2×TOTAL_N units
-
-  // 4) Random split of the budget across chosen categories (exponential sampling => uneven, realistic split)
-  const raw = chosen.map(() => -Math.log(Math.max(0.0001, Math.random())));
-  const rawSum = raw.reduce((a, b) => a + b, 0) || 1;
-  let mult = raw.map(x => (x / rawSum) * totalBudget);
-
-  // 5) Hard cap per category at TOTAL_N× baseline (never more than "avg × Gesamtzahl Kategorien"), floor so nothing is silly-small
-  mult = mult.map(m => Math.min(TOTAL_N, Math.max(0.35, m)));
-
-  // Only sets currentPlan in-memory — nothing is persisted until the user explicitly accepts it
-  currentPlan = chosen.map((key, i) => {
-    const tk = TRACKERS[key];
-    const rawAmount = mult[i] * tk.dailyBaseline;
-    const rounded = statsRoundNicely(key, rawAmount);
-    return { key, icon: TRACKER_ICONS[key] || '🏆', amount: rounded.value, unit: rounded.unit, required: rounded.native };
-  });
-}
-
-// ---- CHALLENGE ACCEPTANCE + AUTO-CHECK ----
-// (challengeLog itself is declared earlier, alongside `states`, so it's ready before init calls loadChallengeLog())
-
-function loadChallengeLog() {
-  try {
-    const raw = localStorage.getItem('daily_challenge_log_v1');
-    challengeLog = raw ? JSON.parse(raw) : {};
-  } catch (e) {
-    console.warn('Challenge log load failed', e);
-    challengeLog = {};
-  }
-}
-
-function saveChallengeLog() {
-  try {
-    localStorage.setItem('daily_challenge_log_v1', JSON.stringify(challengeLog));
-  } catch (e) {
-    console.error('Challenge log save failed', e);
-  }
-}
-
-// Which categories the user says they can actually do today — resets to "all available" each new day
-function loadAvailableCategories() {
-  try {
-    const raw = localStorage.getItem('available_categories_v1');
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed.date === todayISO() && Array.isArray(parsed.keys)) {
-        const keys = parsed.keys.filter(k => TRACKERS[k]);
-        if (keys.length > 0) {
-          availableCategories = new Set(keys);
-          return;
-        }
-      }
-    }
-  } catch (e) {
-    console.warn('Available categories load failed', e);
-  }
-  availableCategories = new Set(Object.keys(TRACKERS));
-}
-
-function saveAvailableCategories() {
-  try {
-    localStorage.setItem('available_categories_v1', JSON.stringify({ date: todayISO(), keys: Array.from(availableCategories) }));
-  } catch (e) {
-    console.error('Available categories save failed', e);
-  }
-}
-
-function toggleAvailableCategory(key) {
-  if (!TRACKERS[key]) return;
-  if (availableCategories.has(key)) {
-    if (availableCategories.size === 1) return; // keep at least one selectable
-    availableCategories.delete(key);
-  } else {
-    availableCategories.add(key);
-  }
-  saveAvailableCategories();
-  renderAvailChips();
-}
-
-function renderAvailChips() {
-  const el = document.getElementById('genAvailChips');
-  if (!el) return;
-  el.innerHTML = Object.keys(TRACKERS).map(key => {
-    const tk = TRACKERS[key];
-    const active = availableCategories.has(key);
-    return `<button type="button" class="gen-chip ${active ? 'active' : ''}" data-key="${key}">${TRACKER_ICONS[key] || ''} ${DISCIPLINE_NAMES[key] || tk.unit}</button>`;
-  }).join('');
-}
-
-// Lock in today's rolled plan. From this point on, completion is auto-checked (never manually set) —
-// including retroactively, if entries for that date get added/edited later.
-function acceptChallenge() {
-  if (!currentPlan) return;
-  const today = todayISO();
-  challengeLog[today] = { plan: currentPlan, accepted: true, acceptedAt: Date.now() };
-  saveChallengeLog();
-}
-
-// Un-accept today's challenge (e.g. genuinely infeasible) so it can be re-rolled/re-accepted
-function resetTodayChallenge() {
-  const today = todayISO();
-  if (!challengeLog[today]) return;
-  delete challengeLog[today];
-  saveChallengeLog();
-  renderGenerator();
-}
-
-function isChallengeAccepted(entry) {
-  // Accepts both the current format (accepted:true) and challenge logs saved by an earlier
-  // version of this feature (completed:true/false), so nothing already saved gets lost.
-  return !!entry && (entry.accepted === true || entry.completed === true || entry.completed === false);
-}
-
-// The native (storage-unit) amount required for a plan item — falls back to a sane default
-// for challenge logs saved before "required" was tracked per item.
-function requiredAmountFor(item) {
-  if (item.required != null) return item.required;
-  return item.key === 'swimming' ? item.amount / 1000 : item.amount;
-}
-
-// A plan is "met" once EVERY item in it has enough entries logged for that exact date —
-// recomputed live, so backfilling an old date later automatically flips it to met.
-function isChallengeMet(dateISO, plan) {
-  if (!plan || plan.length === 0) return false;
-  return plan.every(item => {
-    const entries = (states[item.key] && states[item.key].entries) || [];
-    const actual = entries.filter(e => e.date === dateISO).reduce((s, e) => s + e.count, 0);
-    return actual >= requiredAmountFor(item) - 1e-9;
-  });
-}
-
-// Overall completion % of a challenge on a given date — average of each item's own %
-// (each item capped at 100% so one wildly-overshot category doesn't hide unfinished ones)
-function challengeProgressPct(dateISO, plan) {
-  if (!plan || plan.length === 0) return 0;
-  let sum = 0;
-  for (const item of plan) {
-    const entries = (states[item.key] && states[item.key].entries) || [];
-    const actual = entries.filter(e => e.date === dateISO).reduce((s, e) => s + e.count, 0);
-    const required = requiredAmountFor(item);
-    sum += required > 0 ? Math.min(100, (actual / required) * 100) : 100;
-  }
-  return sum / plan.length;
-}
-
-// Count accepted challenges (met vs. total accepted) for the current week and all-time
-function challengeStats() {
-  const today = todayISO();
-  const monday = mondayOf(today);
-  const sunday = addDays(monday, 6);
-  let weekDone = 0, weekAccepted = 0, totalDone = 0, totalAccepted = 0;
-  for (const d of Object.keys(challengeLog)) {
-    const c = challengeLog[d];
-    if (!isChallengeAccepted(c)) continue;
-    totalAccepted++;
-    const met = isChallengeMet(d, c.plan);
-    if (met) totalDone++;
-    if (d >= monday && d <= sunday) {
-      weekAccepted++;
-      if (met) weekDone++;
-    }
-  }
-  return { weekDone, weekAccepted, totalDone, totalAccepted };
-}
-
-function renderChallengeStats() {
-  const statsEl = document.getElementById('genStats');
-  if (!statsEl) return;
-  const s = challengeStats();
-  if (s.totalAccepted === 0) {
-    statsEl.innerHTML = '';
-    return;
-  }
-  statsEl.innerHTML = `
-    <div class="gen-stat-row"><strong>${s.weekDone} / ${s.weekAccepted}</strong><span>Diese Woche geschafft</span></div>
-    <div class="gen-stat-row"><strong>${s.totalDone} / ${s.totalAccepted}</strong><span>Insgesamt geschafft</span></div>
-  `;
-}
-
-function rebindGenBtn() {
-  const btn = document.getElementById('genBtn');
-  if (btn) btn.addEventListener('click', () => { rollWorkout(); renderGenerator(); });
-}
-
-function renderGenerator() {
-  const availEl = document.getElementById('genAvail');
-  const empty = document.getElementById('genEmpty');
-  const itemsEl = document.getElementById('genItems');
-  const progressEl = document.getElementById('genProgress');
-  const progressFill = document.getElementById('genProgressFill');
-  const progressLabel = document.getElementById('genProgressLabel');
-  const checklistEl = document.getElementById('genChecklist');
-  const actions = document.getElementById('genActions');
-  const statusEl = document.getElementById('genStatus');
-  const note = document.getElementById('genNote');
-  if (!availEl || !empty || !itemsEl || !progressEl || !checklistEl || !actions || !statusEl || !note) return;
-
-  const today = todayISO();
-  const entry = challengeLog[today];
-  const accepted = isChallengeAccepted(entry);
-
-  // Once accepted, today's locked-in plan always wins over whatever is in memory
-  if (accepted) currentPlan = entry.plan;
-
-  // Category selector is only relevant before the challenge is locked in for today
-  availEl.style.display = accepted ? 'none' : '';
-  if (!accepted) renderAvailChips();
-
-  if (!currentPlan) {
-    empty.style.display = '';
-    itemsEl.innerHTML = '';
-    progressEl.style.display = 'none';
-    checklistEl.innerHTML = '';
-    actions.innerHTML = '<button class="btn-primary" id="genBtn">&#x1F3B2; Würfeln</button>';
-    statusEl.style.display = 'none';
-    note.textContent = '';
-    rebindGenBtn();
-    renderChallengeStats();
-    return;
-  }
-
-  empty.style.display = 'none';
-  itemsEl.innerHTML = currentPlan.map(p => `
-    <div class="gen-item">
-      <div class="gen-item-icon">${p.icon}</div>
-      <div class="gen-item-amount">${p.amount.toLocaleString('de-DE')}</div>
-      <div class="gen-item-unit">${p.unit}</div>
-    </div>
-  `).join('');
-
-  if (accepted) {
-    // Auto-check: compare today's actual tracked entries per category against the plan
-    const pct = challengeProgressPct(today, currentPlan);
-    progressEl.style.display = '';
-    progressFill.style.width = Math.min(100, pct) + '%';
-    progressFill.classList.toggle('complete', pct >= 100);
-    progressLabel.textContent = pct.toFixed(0) + '% erreicht';
-
-    checklistEl.innerHTML = currentPlan.map(p => {
-      const entries = (states[p.key] && states[p.key].entries) || [];
-      const actual = entries.filter(e => e.date === today).reduce((s, e) => s + e.count, 0);
-      const met = actual >= requiredAmountFor(p) - 1e-9;
-      return `<div class="gen-check-row ${met ? 'met' : ''}">
-        <span class="gen-check-icon">${met ? '&#x2705;' : '&#x23F3;'}</span>
-        <span>${p.icon} ${p.amount.toLocaleString('de-DE')} ${p.unit}</span>
-      </div>`;
-    }).join('');
-
-    const met = isChallengeMet(today, currentPlan);
-    actions.innerHTML = '<button class="btn-small" id="genResetBtn">&#8635; Challenge zurücksetzen</button>';
-    statusEl.style.display = '';
-    statusEl.innerHTML = met
-      ? '<span class="gen-status-badge done">&#x2705; Challenge geschafft</span>'
-      : '<span class="gen-status-badge pending">&#x23F3; Noch nicht erreicht — trag nach, sobald du es schaffst</span>';
-    note.textContent = '';
-    const resetBtn = document.getElementById('genResetBtn');
-    if (resetBtn) resetBtn.addEventListener('click', resetTodayChallenge);
-  } else {
-    progressEl.style.display = 'none';
-    checklistEl.innerHTML = '';
-    statusEl.style.display = 'none';
-    actions.innerHTML = `
-      <button class="btn-small" id="genRerollBtn">&#x1F3B2; Neu würfeln</button>
-      <button class="btn-primary" id="genAcceptBtn">&#x2705; Annehmen</button>
-    `;
-    note.textContent = currentPlan.length === 1
-      ? 'Heute volle Konzentration auf eine Kategorie.'
-      : `Kombiniert aus ${currentPlan.length} Kategorien.`;
-    const rerollBtn = document.getElementById('genRerollBtn');
-    if (rerollBtn) rerollBtn.addEventListener('click', () => { rollWorkout(); renderGenerator(); });
-    const acceptBtn = document.getElementById('genAcceptBtn');
-    if (acceptBtn) acceptBtn.addEventListener('click', () => { acceptChallenge(); renderGenerator(); });
-  }
-
-  renderChallengeStats();
 }
 
 // ============================================================
@@ -3928,15 +3442,6 @@ document.getElementById('importFile').addEventListener('change', e => {
 });
 
 document.getElementById('authBtn').addEventListener('click', showSyncSetup);
-
-// (Accept / reroll / reset buttons for the challenge generator are wired dynamically in renderGenerator())
-
-// Toggle which categories are doable today (delegated click on the chip row)
-document.getElementById('genAvailChips').addEventListener('click', (e) => {
-  const chip = e.target.closest('.gen-chip');
-  if (!chip) return;
-  toggleAvailableCategory(chip.dataset.key);
-});
 
 // Expandable category breakdown per week row (delegated click)
 document.getElementById('statsWeekList').addEventListener('click', (e) => {
