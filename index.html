@@ -1057,6 +1057,15 @@
     font-size: 22px;
     color: var(--text);
   }
+  .stats-cat-remaining {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--text-faint);
+    margin-top: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 
   .stats-week-row {
     padding: 2px 0;
@@ -3132,6 +3141,39 @@ function countWeekBadges(dailyTotals, uptoMondayIso) {
   return { earned, total };
 }
 
+// How much MORE of a single category (on top of what's already logged in it this week) would be
+// needed to close the entire remaining weekly gap, if every other category stayed exactly as-is.
+// Only depends on the overall % (not on the category itself) — that's what makes categories
+// interchangeable/compensating. Returns 0 once the week is already at/above 100% overall.
+function statsRemainingSolo(overallPct, key) {
+  const TOTAL_N = Object.keys(TRACKERS).length;
+  const tk = TRACKERS[key];
+  const weeklyTarget = tk.dailyBaseline * 7;
+  const deficitPP = TOTAL_N * (100 - overallPct); // total percentage-points still missing, across all categories
+  return Math.max(0, (deficitPP / 100) * weeklyTarget);
+}
+
+// Formats a native-unit amount for display, respecting each tracker's own input convention
+// (e.g. swimming is stored in km but shown in meters, cycling keeps one decimal).
+function statsFormatCatAmount(key, amountNative) {
+  const tk = TRACKERS[key];
+  if (tk.inputMultiplier) {
+    const v = amountNative / tk.inputMultiplier;
+    return Math.round(v).toLocaleString('de-DE') + ' m';
+  }
+  if (tk.step === '0.1') {
+    return amountNative.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' km';
+  }
+  return Math.round(amountNative).toLocaleString('de-DE') + ' ' + tk.unitShort;
+}
+
+function statsRemainingLabel(overallPct, key) {
+  const remaining = statsRemainingSolo(overallPct, key);
+  return remaining > 0
+    ? 'noch ' + statsFormatCatAmount(key, remaining) + ' nötig'
+    : '&#x2705; reicht bereits';
+}
+
 function renderStats() {
   const dailyTotals = statsBuildDailyTotals();
   const today = todayISO();
@@ -3155,6 +3197,7 @@ function renderStats() {
     return `<div class="stats-cat">
       <div class="stats-cat-name">${TRACKER_ICONS[key] || ''} ${tk.unit}</div>
       <div class="stats-cat-pct">${pct.toFixed(0)}%</div>
+      <div class="stats-cat-remaining">${statsRemainingLabel(curWeek.overall, key)}</div>
     </div>`;
   }).join('');
 
@@ -3203,6 +3246,7 @@ function renderStats() {
         return `<div class="stats-cat">
           <div class="stats-cat-name">${TRACKER_ICONS[key] || ''} ${tk.unit}</div>
           <div class="stats-cat-pct">${w.perCat[key].toFixed(0)}%</div>
+          <div class="stats-cat-remaining">${statsRemainingLabel(w.overall, key)}</div>
         </div>`;
       }).join('');
 
