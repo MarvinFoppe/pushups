@@ -1170,6 +1170,99 @@
     .stats-badge-total { padding: 8px 14px; min-width: 74px; }
   }
 
+  /* ===== MONATSSAMMLUNG (Monats-Badges, runde Medaille) ===== */
+  .month-total {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    color: var(--accent);
+    margin-left: 8px;
+  }
+  .month-collection {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+    gap: 20px 12px;
+    justify-items: center;
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px 16px;
+  }
+  .month-cell { display: flex; flex-direction: column; align-items: center; }
+  .month-cap {
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    margin-top: 8px;
+    letter-spacing: 0.3px;
+    line-height: 1.2;
+  }
+  .month-cap.earned { color: var(--success); }
+  .month-cap.current { color: var(--accent-2); }
+  .month-cap.locked { color: var(--text-faint); }
+
+  .medal {
+    position: relative;
+    width: 88px; height: 88px;
+    border-radius: 50%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    background:
+      radial-gradient(circle at 38% 30%, rgba(255,255,255,.55), rgba(255,255,255,0) 45%),
+      radial-gradient(circle at 50% 55%, var(--c1), var(--c2));
+    box-shadow:
+      inset 0 2px 4px rgba(255,255,255,.5),
+      inset 0 -6px 12px rgba(0,0,0,.35),
+      0 6px 16px rgba(0,0,0,.35);
+    border: 3px solid rgba(255,255,255,.35);
+  }
+  .medal::after {
+    content: '';
+    position: absolute; inset: 8px;
+    border-radius: 50%;
+    border: 1.5px dashed rgba(255,255,255,.4);
+    pointer-events: none;
+  }
+  .medal .m-emoji { font-size: 22px; line-height: 1; filter: drop-shadow(0 1px 1px rgba(0,0,0,.3)); }
+  .medal .m-month {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 23px; line-height: .9; letter-spacing: 1px;
+    color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.4);
+    margin-top: 2px;
+  }
+  .medal .m-year {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; color: rgba(255,255,255,.9);
+    text-shadow: 0 1px 1px rgba(0,0,0,.4);
+  }
+  .medal.earned .m-check {
+    position: absolute; bottom: -4px; right: -4px;
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--success);
+    border: 2.5px solid var(--bg-elev);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; color: #fff; font-weight: 900;
+    box-shadow: 0 2px 6px rgba(0,0,0,.4);
+  }
+  .medal.locked {
+    filter: grayscale(1) brightness(.8);
+    opacity: .38;
+    box-shadow: inset 0 -6px 12px rgba(0,0,0,.35), 0 4px 10px rgba(0,0,0,.25);
+  }
+  .medal.locked .m-emoji { opacity: .5; }
+  .medal-ring {
+    position: relative;
+    width: 100px; height: 100px; border-radius: 50%;
+    padding: 6px;
+    background: conic-gradient(var(--accent-2) calc(var(--p) * 1%), rgba(255,255,255,.15) 0);
+  }
+  .medal-ring .medal { width: 88px; height: 88px; filter: grayscale(.72) brightness(.85); opacity: .72; }
+  .medal-ring .m-pct {
+    position: absolute; bottom: -2px; left: 50%; transform: translateX(-50%);
+    background: var(--accent-2); color: var(--bg);
+    font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 9px;
+    padding: 1px 8px; border-radius: 8px;
+    border: 2px solid var(--bg-elev);
+  }
 </style>
 </head>
 <body>
@@ -1377,6 +1470,14 @@
         <div class="stats-cat-grid" id="statsWeekCatGrid"></div>
       </div>
       <div class="entries-card" id="statsWeekList"></div>
+    </div>
+
+    <!-- MONATSSAMMLUNG -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title"><span class="section-title-accent">&#x203A;</span> Monatssammlung <span id="monthBadgeCount" class="month-total">&#127942; 0 / 0</span></div>
+      </div>
+      <div class="month-collection" id="monthCollection"></div>
     </div>
 
   </div>
@@ -2630,6 +2731,9 @@ function switchTab(trackerKey) {
 // RENDER
 // ============================================================
 function render() {
+  // Monats-Badges bei jeder Datenänderung prüfen, damit der Toast auch außerhalb
+  // der Statistik-Ansicht erscheint (renderStats übernimmt das für die Statistik selbst).
+  if (activeTracker !== 'stats') { try { updateMonthBadges(statsBuildDailyTotals(), true); } catch (e) {} }
   if (activeTracker === 'stats') { renderStats(); return; }
   const stats = computeStats();
   const config = getConfig();
@@ -3074,6 +3178,147 @@ const TRACKER_ICONS = {
 const STATS_START_MONDAY = '2026-08-03';
 const STATS_ACCENT = { accent: '#22aaaa', accent2: '#55dddd' };
 
+// ============================================================
+// MONATSSAMMLUNG — runde Medaillen, ein Badge pro Kalendermonat.
+// Ein Monat gilt als erreicht, sobald der kombinierte Plan-Durchschnitt
+// über ALLE Sportarten über den ganzen Monat >= 100 % ist (Tage/Kategorien
+// gleichen sich frei aus — dieselbe Logik wie bei den Wochenbadges).
+// ============================================================
+const STATS_START_MONTH = '2026-08'; // Sammlung startet im August 2026
+const MONTH_SHORT_DE = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+const MONTH_SEASON = {
+  1:{e:'❄️',c1:'#8ec9f0',c2:'#2f6fb3'}, 2:{e:'⛄',c1:'#8ec9f0',c2:'#2f6fb3'},
+  3:{e:'🌱',c1:'#9be36b',c2:'#3f9d3f'}, 4:{e:'🌷',c1:'#9be36b',c2:'#3f9d3f'}, 5:{e:'🌸',c1:'#f7a8d0',c2:'#c94f96'},
+  6:{e:'☀️',c1:'#ffd24d',c2:'#ff8a00'}, 7:{e:'🌻',c1:'#ffd24d',c2:'#ff8a00'}, 8:{e:'🏖️',c1:'#ffd24d',c2:'#ff8a00'},
+  9:{e:'🍂',c1:'#ff9a4d',c2:'#c0392b'}, 10:{e:'🍁',c1:'#ff9a4d',c2:'#c0392b'}, 11:{e:'🌫️',c1:'#ff9a4d',c2:'#c0392b'},
+  12:{e:'🎄',c1:'#8ec9f0',c2:'#2f6fb3'}
+};
+const MONTH_BADGE_KEY = 'month_badges_v1';
+
+function daysInMonth(year, month) { return new Date(year, month, 0).getDate(); } // month 1-12
+
+// Kombinierter Plan-Durchschnitt (%) über einen ganzen Kalendermonat, über ALLE Tracker.
+function statsMonthlyPct(dailyTotals, year, month) {
+  const keys = Object.keys(TRACKERS);
+  const dim = daysInMonth(year, month);
+  const prefix = `${year}-${String(month).padStart(2,'0')}-`;
+  let sum = 0;
+  for (const key of keys) {
+    const tk = TRACKERS[key];
+    const byDate = dailyTotals[key];
+    let monthTotal = 0;
+    for (let d = 1; d <= dim; d++) {
+      monthTotal += byDate[prefix + String(d).padStart(2,'0')] || 0;
+    }
+    sum += (monthTotal / (tk.dailyBaseline * dim)) * 100;
+  }
+  return sum / keys.length;
+}
+
+function monthBadgesLoad() {
+  try { return JSON.parse(localStorage.getItem(MONTH_BADGE_KEY)) || {}; }
+  catch (e) { return {}; }
+}
+function monthBadgesSave(obj) {
+  try { localStorage.setItem(MONTH_BADGE_KEY, JSON.stringify(obj)); } catch (e) {}
+}
+
+// Alle Monate von STATS_START_MONTH bis mind. zum aktuellen Monat (immer aber ein volles Jahr sichtbar).
+function monthCollectionKeys() {
+  const [sy, sm] = STATS_START_MONTH.split('-').map(Number);
+  const today = todayISO();
+  const cy = Number(today.slice(0,4)), cm = Number(today.slice(5,7));
+  const startIdx = sy * 12 + (sm - 1);
+  const curIdx = cy * 12 + (cm - 1);
+  const endIdx = Math.max(curIdx, startIdx + 11); // mindestens 12 Medaillen sichtbar
+  const out = [];
+  for (let idx = startIdx; idx <= endIdx; idx++) {
+    const y = Math.floor(idx / 12), m = (idx % 12) + 1;
+    out.push({ y, m, idx, key: `${y}-${String(m).padStart(2,'0')}` });
+  }
+  return out;
+}
+function currentMonthIdx() {
+  const today = todayISO();
+  return Number(today.slice(0,4)) * 12 + (Number(today.slice(5,7)) - 1);
+}
+
+// Persistierte Freischaltungen aktualisieren; gibt neu erreichte / verlorene Monate zurück.
+function updateMonthBadges(dailyTotals, fireToasts) {
+  const store = monthBadgesLoad();
+  const curIdx = currentMonthIdx();
+  const newlyUnlocked = [], revoked = [];
+  let changed = false;
+  for (const mo of monthCollectionKeys()) {
+    if (mo.idx > curIdx) continue; // zukünftige Monate können (noch) nicht erreicht werden
+    const meets = statsMonthlyPct(dailyTotals, mo.y, mo.m) >= 100 - 1e-9;
+    const has = !!store[mo.key];
+    if (meets && !has) { store[mo.key] = todayISO(); newlyUnlocked.push(mo); changed = true; }
+    else if (!meets && has) { delete store[mo.key]; revoked.push(mo); changed = true; }
+  }
+  if (changed) monthBadgesSave(store);
+  if (fireToasts) {
+    newlyUnlocked.forEach(mo => showToast({
+      icon: MONTH_SEASON[mo.m].e,
+      title: MONTH_SHORT_DE[mo.m-1] + ' ' + mo.y,
+      desc: 'Monat geschafft — Plan zu 100 % erfüllt!'
+    }, 'unlock'));
+    revoked.forEach(mo => showToast({
+      icon: MONTH_SEASON[mo.m].e,
+      title: MONTH_SHORT_DE[mo.m-1] + ' ' + mo.y
+    }, 'revoke'));
+  }
+  return { newlyUnlocked, revoked };
+}
+
+function renderMonthCollection(dailyTotals) {
+  const store = monthBadgesLoad();
+  const months = monthCollectionKeys();
+  const curIdx = currentMonthIdx();
+
+  // Zähler: erreicht / bisher wertbare Monate (bis einschl. aktuellem Monat) — analog zu den Wochenbadges.
+  const countable = months.filter(mo => mo.idx <= curIdx).length;
+  const earnedCount = months.filter(mo => store[mo.key]).length;
+  document.getElementById('monthBadgeCount').innerHTML = '&#127942; ' + earnedCount + ' / ' + countable;
+
+  document.getElementById('monthCollection').innerHTML = months.map(mo => {
+    const s = MONTH_SEASON[mo.m];
+    const mn = MONTH_SHORT_DE[mo.m-1];
+    const cssVars = `--c1:${s.c1};--c2:${s.c2}`;
+    const inner = `<div class="m-emoji">${s.e}</div><div class="m-month">${mn}</div><div class="m-year">${mo.y}</div>`;
+    const unlockedDate = store[mo.key];
+
+    if (unlockedDate) {
+      return `<div class="month-cell">
+        <div class="medal earned" style="${cssVars}">${inner}<div class="m-check">&#10003;</div></div>
+        <div class="month-cap earned">&#10003; ${fmtDateDe(unlockedDate)}</div>
+      </div>`;
+    }
+    if (mo.idx > curIdx) { // zukünftig
+      return `<div class="month-cell">
+        <div class="medal locked" style="${cssVars}">${inner}</div>
+        <div class="month-cap locked">ausstehend</div>
+      </div>`;
+    }
+    const pct = statsMonthlyPct(dailyTotals, mo.y, mo.m);
+    if (mo.idx === curIdx) { // laufender Monat mit Fortschrittsring
+      const p = Math.max(0, Math.min(100, pct));
+      return `<div class="month-cell">
+        <div class="medal-ring" style="${cssVars};--p:${p}">
+          <div class="medal" style="${cssVars}">${inner}</div>
+          <div class="m-pct">${Math.round(pct)}%</div>
+        </div>
+        <div class="month-cap current">läuft &middot; ${Math.round(pct)} %</div>
+      </div>`;
+    }
+    // vergangener, nicht erreichter Monat
+    return `<div class="month-cell">
+      <div class="medal locked" style="${cssVars}">${inner}</div>
+      <div class="month-cap locked">${Math.round(pct)} % &middot; verpasst</div>
+    </div>`;
+  }).join('');
+}
+
 // Build { trackerKey: { dateISO: totalCountThatDay } } across ALL trackers
 function statsBuildDailyTotals() {
   const result = {};
@@ -3178,6 +3423,10 @@ function renderStats() {
   const dailyTotals = statsBuildDailyTotals();
   const today = todayISO();
   const curMonday = mondayOf(today);
+
+  // ---- MONATSSAMMLUNG ----
+  updateMonthBadges(dailyTotals, true);
+  renderMonthCollection(dailyTotals);
 
   // ---- CURRENT WEEK HERO ----
   const curWeek = statsWeeklyPct(dailyTotals, curMonday);
