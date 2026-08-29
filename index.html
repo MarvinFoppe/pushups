@@ -1199,6 +1199,19 @@
   .month-cap.earned { color: var(--success); }
   .month-cap.current { color: var(--accent-2); }
   .month-cap.locked { color: var(--text-faint); }
+  .month-cell { cursor: pointer; transition: transform 0.15s; }
+  .month-cell:hover { transform: translateY(-2px); }
+  .month-cell.open .medal {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+  .month-detail {
+    margin-top: 14px;
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px 18px;
+  }
 
   .medal {
     position: relative;
@@ -1478,6 +1491,7 @@
         <div class="section-title"><span class="section-title-accent">&#x203A;</span> Monatssammlung <span id="monthBadgeCount" class="month-total">&#127942; 0 / 0</span></div>
       </div>
       <div class="month-collection" id="monthCollection"></div>
+      <div class="month-detail" id="monthDetail" style="display:none"></div>
     </div>
 
   </div>
@@ -3194,15 +3208,19 @@ const MONTH_SEASON = {
   12:{e:'🎄',c1:'#8ec9f0',c2:'#2f6fb3'}
 };
 const MONTH_BADGE_KEY = 'month_badges_v1';
+// Welcher Monat ist in der Sammlung gerade aufgeklappt (null = keiner).
+let statsOpenMonthKey = null;
 
 function daysInMonth(year, month) { return new Date(year, month, 0).getDate(); } // month 1-12
 
-// Kombinierter Plan-Durchschnitt (%) über einen ganzen Kalendermonat, über ALLE Tracker.
-function statsMonthlyPct(dailyTotals, year, month) {
+// Kombinierter Plan-Durchschnitt (%) über einen ganzen Kalendermonat, über ALLE Tracker,
+// inkl. Aufschlüsselung pro Kategorie und Tage-im-Monat (analog zu statsWeeklyPct).
+function statsMonthlyBreakdown(dailyTotals, year, month) {
   const keys = Object.keys(TRACKERS);
   const dim = daysInMonth(year, month);
   const prefix = `${year}-${String(month).padStart(2,'0')}-`;
   let sum = 0;
+  const perCat = {};
   for (const key of keys) {
     const tk = TRACKERS[key];
     const byDate = dailyTotals[key];
@@ -3210,9 +3228,14 @@ function statsMonthlyPct(dailyTotals, year, month) {
     for (let d = 1; d <= dim; d++) {
       monthTotal += byDate[prefix + String(d).padStart(2,'0')] || 0;
     }
-    sum += (monthTotal / (tk.dailyBaseline * dim)) * 100;
+    const pct = (monthTotal / (tk.dailyBaseline * dim)) * 100;
+    perCat[key] = pct;
+    sum += pct;
   }
-  return sum / keys.length;
+  return { overall: sum / keys.length, perCat, dim };
+}
+function statsMonthlyPct(dailyTotals, year, month) {
+  return statsMonthlyBreakdown(dailyTotals, year, month).overall;
 }
 
 function monthBadgesLoad() {
@@ -3283,19 +3306,20 @@ function renderMonthCollection(dailyTotals) {
 
   document.getElementById('monthCollection').innerHTML = months.map(mo => {
     const s = MONTH_SEASON[mo.m];
+    const openCls = mo.key === statsOpenMonthKey ? ' open' : '';
     const mn = MONTH_SHORT_DE[mo.m-1];
     const cssVars = `--c1:${s.c1};--c2:${s.c2}`;
     const inner = `<div class="m-emoji">${s.e}</div><div class="m-month">${mn}</div><div class="m-year">${mo.y}</div>`;
     const unlockedDate = store[mo.key];
 
     if (unlockedDate) {
-      return `<div class="month-cell">
+      return `<div class="month-cell${openCls}" data-monthkey="${mo.key}">
         <div class="medal earned" style="${cssVars}">${inner}<div class="m-check">&#10003;</div></div>
         <div class="month-cap earned">&#10003; ${fmtDateDe(unlockedDate)}</div>
       </div>`;
     }
     if (mo.idx > curIdx) { // zukünftig
-      return `<div class="month-cell">
+      return `<div class="month-cell${openCls}" data-monthkey="${mo.key}">
         <div class="medal locked" style="${cssVars}">${inner}</div>
         <div class="month-cap locked">ausstehend</div>
       </div>`;
@@ -3303,7 +3327,7 @@ function renderMonthCollection(dailyTotals) {
     const pct = statsMonthlyPct(dailyTotals, mo.y, mo.m);
     if (mo.idx === curIdx) { // laufender Monat mit Fortschrittsring
       const p = Math.max(0, Math.min(100, pct));
-      return `<div class="month-cell">
+      return `<div class="month-cell${openCls}" data-monthkey="${mo.key}">
         <div class="medal-ring" style="${cssVars};--p:${p}">
           <div class="medal" style="${cssVars}">${inner}</div>
           <div class="m-pct">${Math.round(pct)}%</div>
@@ -3312,11 +3336,34 @@ function renderMonthCollection(dailyTotals) {
       </div>`;
     }
     // vergangener, nicht erreichter Monat
-    return `<div class="month-cell">
+    return `<div class="month-cell${openCls}" data-monthkey="${mo.key}">
       <div class="medal locked" style="${cssVars}">${inner}</div>
       <div class="month-cap locked">${Math.round(pct)} % &middot; verpasst</div>
     </div>`;
   }).join('');
+
+  renderMonthDetail(dailyTotals);
+}
+
+// Aufgeklappter Monat: zeigt — analog zu den Wochenchallenges — pro Disziplin, wie viel
+// in dieser einen Disziplin noch fehlt, um den GESAMTEN Monatsplan allein darüber zu schließen.
+function renderMonthDetail(dailyTotals) {
+  const el = document.getElementById('monthDetail');
+  if (!el) return;
+  if (!statsOpenMonthKey) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  const [y, m] = statsOpenMonthKey.split('-').map(Number);
+  const b = statsMonthlyBreakdown(dailyTotals, y, m);
+  const catGridHtml = Object.keys(TRACKERS).map(key => {
+    const tk = TRACKERS[key];
+    return `<div class="stats-cat">
+      <div class="stats-cat-name">${TRACKER_ICONS[key] || ''} ${tk.unit}</div>
+      <div class="stats-cat-pct">${b.perCat[key].toFixed(0)}%</div>
+      <div class="stats-cat-remaining">${statsRemainingLabel(b.overall, key, b.dim)}</div>
+    </div>`;
+  }).join('');
+  el.style.display = 'block';
+  el.innerHTML = `<div class="stats-detail-label">${MONTH_SHORT_DE[m-1]} ${y} &middot; Plan ${b.overall.toFixed(1)} % &middot; noch nötig, wenn nur EINE Disziplin</div>
+    <div class="stats-cat-grid">${catGridHtml}</div>`;
 }
 
 // Build { trackerKey: { dateISO: totalCountThatDay } } across ALL trackers
@@ -3390,12 +3437,13 @@ function countWeekBadges(dailyTotals, uptoMondayIso) {
 // needed to close the entire remaining weekly gap, if every other category stayed exactly as-is.
 // Only depends on the overall % (not on the category itself) — that's what makes categories
 // interchangeable/compensating. Returns 0 once the week is already at/above 100% overall.
-function statsRemainingSolo(overallPct, key) {
+function statsRemainingSolo(overallPct, key, periodDays) {
+  periodDays = periodDays || 7;
   const TOTAL_N = Object.keys(TRACKERS).length;
   const tk = TRACKERS[key];
-  const weeklyTarget = tk.dailyBaseline * 7;
+  const periodTarget = tk.dailyBaseline * periodDays;
   const deficitPP = TOTAL_N * (100 - overallPct); // total percentage-points still missing, across all categories
-  return Math.max(0, (deficitPP / 100) * weeklyTarget);
+  return Math.max(0, (deficitPP / 100) * periodTarget);
 }
 
 // Formats a native-unit amount for display, respecting each tracker's own input convention
@@ -3412,8 +3460,8 @@ function statsFormatCatAmount(key, amountNative) {
   return Math.round(amountNative).toLocaleString('de-DE') + ' ' + tk.unitShort;
 }
 
-function statsRemainingLabel(overallPct, key) {
-  const remaining = statsRemainingSolo(overallPct, key);
+function statsRemainingLabel(overallPct, key, periodDays) {
+  const remaining = statsRemainingSolo(overallPct, key, periodDays);
   return remaining > 0
     ? 'noch ' + statsFormatCatAmount(key, remaining) + ' nötig'
     : '&#x2705; reicht bereits';
@@ -3742,6 +3790,14 @@ document.getElementById('statsWeekList').addEventListener('click', (e) => {
   if (!main) return;
   const row = main.closest('.stats-week-row');
   if (row) row.classList.toggle('open');
+});
+
+// Aufklappbare Monats-Badges: Klick auf eine Medaille zeigt die Rest-Aufschlüsselung.
+document.getElementById('monthCollection').addEventListener('click', (e) => {
+  const cell = e.target.closest('.month-cell');
+  if (!cell || !cell.dataset.monthkey) return;
+  statsOpenMonthKey = (statsOpenMonthKey === cell.dataset.monthkey) ? null : cell.dataset.monthkey;
+  renderMonthCollection(statsBuildDailyTotals());
 });
 
 // Init sync UI
