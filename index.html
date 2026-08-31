@@ -3213,11 +3213,23 @@ let statsOpenMonthKey = null;
 
 function daysInMonth(year, month) { return new Date(year, month, 0).getDate(); } // month 1-12
 
-// Kombinierter Plan-Durchschnitt (%) über einen ganzen Kalendermonat, über ALLE Tracker,
-// inkl. Aufschlüsselung pro Kategorie und Tage-im-Monat (analog zu statsWeeklyPct).
+// Erster gewerteter Tag eines Monats. Normal der 1., aber der Startmonat der Sammlung
+// (STATS_START_MONTH) beginnt erst am Tag, an dem auch die Wochenwertung startet
+// (STATS_START_MONDAY) — für August 2026 also der 03. statt 01.
+function monthEvalStartDay(year, month) {
+  const key = `${year}-${String(month).padStart(2,'0')}`;
+  if (key === STATS_START_MONTH) return Number(STATS_START_MONDAY.slice(8, 10));
+  return 1;
+}
+
+// Kombinierter Plan-Durchschnitt (%) über einen Kalendermonat, über ALLE Tracker,
+// inkl. Aufschlüsselung pro Kategorie und Anzahl gewerteter Tage (analog zu statsWeeklyPct).
+// Der Startmonat wird ggf. erst ab monthEvalStartDay gewertet (Ziel entsprechend kleiner).
 function statsMonthlyBreakdown(dailyTotals, year, month) {
   const keys = Object.keys(TRACKERS);
   const dim = daysInMonth(year, month);
+  const startDay = monthEvalStartDay(year, month);
+  const evalDays = dim - startDay + 1; // gewertete Tage (voller Monat = dim)
   const prefix = `${year}-${String(month).padStart(2,'0')}-`;
   let sum = 0;
   const perCat = {};
@@ -3225,14 +3237,14 @@ function statsMonthlyBreakdown(dailyTotals, year, month) {
     const tk = TRACKERS[key];
     const byDate = dailyTotals[key];
     let monthTotal = 0;
-    for (let d = 1; d <= dim; d++) {
+    for (let d = startDay; d <= dim; d++) {
       monthTotal += byDate[prefix + String(d).padStart(2,'0')] || 0;
     }
-    const pct = (monthTotal / (tk.dailyBaseline * dim)) * 100;
+    const pct = (monthTotal / (tk.dailyBaseline * evalDays)) * 100;
     perCat[key] = pct;
     sum += pct;
   }
-  return { overall: sum / keys.length, perCat, dim };
+  return { overall: sum / keys.length, perCat, dim: evalDays };
 }
 function statsMonthlyPct(dailyTotals, year, month) {
   return statsMonthlyBreakdown(dailyTotals, year, month).overall;
