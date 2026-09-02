@@ -164,6 +164,13 @@
     border-color: var(--accent);
     background: rgba(255,102,51,0.15);
   }
+  /* Versteckter Mini-Tab (Lauf-Bonus) — unaufdringlich, nur Icon */
+  .tab-mini {
+    padding: 10px 11px;
+    opacity: 0.55;
+    filter: grayscale(0.3);
+  }
+  .tab-mini:hover, .tab-mini.active { opacity: 1; filter: none; }
 
   /* COUNTER HERO */
   .hero {
@@ -1302,6 +1309,7 @@
     <button class="tab" data-tracker="steps">&#x1F45F; Schritte</button>
     <button class="tab" data-tracker="stretching">&#x1F9D8; Dehnen</button>
     <button class="tab" data-tracker="stats">&#x1F4CA; Statistik</button>
+    <button class="tab tab-mini" data-tracker="running" title="Lauf-Bonus">&#x1F3C3;</button>
   </div>
 
   <div id="trackerView">
@@ -1480,6 +1488,7 @@
         </div>
         <div class="stats-bar"><div class="stats-bar-fill" id="statsWeekBarFill" style="width:0%"></div></div>
         <div class="stats-week-complete-banner" id="statsWeekBadge" style="display:none">&#127942; Woche geschafft!</div>
+        <div id="statsWeekRunBonus" style="display:none;margin:10px 0 0;padding:8px 12px;border:1px dashed var(--accent);border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);text-align:center"></div>
         <div class="stats-cat-grid" id="statsWeekCatGrid"></div>
       </div>
       <div class="entries-card" id="statsWeekList"></div>
@@ -1496,6 +1505,70 @@
 
   </div>
   <!-- /statsView -->
+
+  <!-- LAUF-BONUS TAB (versteckt) -->
+  <div id="runningView" style="display:none">
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title"><span class="section-title-accent">&#x203A;</span> Lauf-Bonus</div>
+      </div>
+      <div class="input-card" style="margin-bottom:16px">
+        <p style="font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.6;color:var(--text-dim);margin:0 0 14px">
+          Joggen ist keine eigene Kategorie &mdash; ein Lauf gibt stattdessen <b>Bonus-Prozentpunkte</b> direkt auf dein <b>Wochen-</b> und <b>Monatsbadge</b>.
+          Formel: <span style="color:var(--accent)">km &times; Pace-Faktor</span>, Faktor&nbsp;=&nbsp;6:00&nbsp;/&nbsp;deine&nbsp;Pace (gedeckelt 0,6&ndash;1,6).
+          Je mehr km und je schneller, desto mehr pp.
+        </p>
+        <div class="input-row">
+          <div class="input-group">
+            <label for="runKm">Distanz (km)</label>
+            <input type="number" id="runKm" min="0.1" step="0.1" placeholder="z. B. 10">
+          </div>
+          <div class="input-group">
+            <label for="runDate">Datum</label>
+            <input type="date" id="runDate">
+          </div>
+        </div>
+        <div class="input-row">
+          <div class="input-group">
+            <label for="runMin">Zeit &mdash; Minuten</label>
+            <input type="number" id="runMin" min="0" step="1" placeholder="z. B. 55">
+          </div>
+          <div class="input-group">
+            <label for="runSec">Zeit &mdash; Sekunden</label>
+            <input type="number" id="runSec" min="0" max="59" step="1" placeholder="z. B. 0">
+          </div>
+        </div>
+        <div id="runPreview" style="text-align:center;padding:8px 0 12px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-faint)">Pace &amp; Bonus erscheinen hier</div>
+        <button class="btn-primary" id="runAddBtn">+ Lauf hinzufügen</button>
+      </div>
+
+      <div class="stats-hero" style="margin-bottom:16px">
+        <div class="stats-big-label">Aktueller Lauf-Bonus</div>
+        <div class="stats-cat-grid" style="margin-top:10px">
+          <div class="stats-cat">
+            <div class="stats-cat-name">&#x1F3C3; Diese Woche</div>
+            <div class="stats-cat-pct" id="runWeekBonus">+0,0 pp</div>
+            <div class="stats-cat-remaining" id="runWeekRange">&mdash;</div>
+          </div>
+          <div class="stats-cat">
+            <div class="stats-cat-name">&#x1F4C5; Dieser Monat</div>
+            <div class="stats-cat-pct" id="runMonthBonus">+0,0 pp</div>
+            <div class="stats-cat-remaining" id="runMonthName">&mdash;</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title"><span class="section-title-accent">&#x203A;</span> Deine L&auml;ufe</div>
+      </div>
+      <div class="entries-card" id="runList">
+        <div class="empty">Noch keine L&auml;ufe.</div>
+      </div>
+    </div>
+  </div>
+  <!-- /runningView -->
 
   <div class="footer">
     <div id="footerLabel">Fitness Tracker &middot; Local Storage</div>
@@ -2102,6 +2175,140 @@ if ('serviceWorker' in navigator) {
 for (const key of Object.keys(TRACKERS)) loadState(key);
 
 // ============================================================
+// LAUF-BONUS — Joggen ist KEINE eigene Kategorie (fließt nicht in den
+// Kategorie-Durchschnitt ein), sondern gibt Bonus-Prozentpunkte direkt auf
+// das Wochen- und Monats-Overall. Eigener Speicher, eigener Sync-Key.
+// Bonus = km × Pace-Faktor × Gewicht,  Faktor = REF_PACE / Pace  (gedeckelt).
+// ============================================================
+const RUNNING_STORAGE_KEY = 'running_bonus_v1';
+const RUNNING_SYNC_KEY = 'running';
+const RUN_REF_PACE = 6.0;   // min/km, bei der der Pace-Faktor genau 1,0 ist
+const RUN_WEIGHT   = 1.0;   // Wertigkeit (10 km @ 6:00 → 10,0 pp)
+const RUN_FACTOR_MIN = 0.6; // sehr langsam
+const RUN_FACTOR_MAX = 1.6; // sehr schnell
+const RUNNING_ACCENT = { accent: '#ff8c42', accent2: '#ffb27a' };
+
+let runningState = { entries: [], updatedAt: 0 };
+let runningPushTimeout = null;
+
+function loadRunning() {
+  try {
+    const raw = localStorage.getItem(RUNNING_STORAGE_KEY);
+    if (raw) {
+      const s = JSON.parse(raw);
+      runningState = { entries: Array.isArray(s.entries) ? s.entries : [], updatedAt: s.updatedAt || 0 };
+    }
+  } catch (e) { console.warn('Load running failed', e); runningState = { entries: [], updatedAt: 0 }; }
+}
+loadRunning();
+
+// Schreibt lokal, OHNE updatedAt zu ändern (für Sync-Merges, die updatedAt selbst setzen)
+function persistRunningLocal() {
+  try { localStorage.setItem(RUNNING_STORAGE_KEY, JSON.stringify(runningState)); }
+  catch (e) { console.error('Running persist failed', e); }
+}
+// Nutzer-Aktion: updatedAt hochsetzen, lokal speichern, Cloud-Push planen
+function saveRunning() {
+  runningState.updatedAt = Date.now();
+  persistRunningLocal();
+  scheduleRunningPush();
+}
+
+// Pace (min/km) eines Laufs
+function runPaceMinPerKm(r) {
+  if (!r.km || r.km <= 0) return Infinity;
+  return (r.sec / 60) / r.km;
+}
+// Bonus-Prozentpunkte für gegebene km + Pace
+function runBonusPP(km, paceMin) {
+  if (!km || km <= 0 || !isFinite(paceMin) || paceMin <= 0) return 0;
+  const factor = Math.max(RUN_FACTOR_MIN, Math.min(RUN_FACTOR_MAX, RUN_REF_PACE / paceMin));
+  return km * factor * RUN_WEIGHT;
+}
+function runEntryBonus(r) { return runBonusPP(r.km, runPaceMinPerKm(r)); }
+// Summe der Bonus-pp aller Läufe im Datumsbereich [startIso, endIso] (inkl.)
+function runBonusForRange(startIso, endIso) {
+  let pp = 0;
+  for (const r of runningState.entries) {
+    if (r.date >= startIso && r.date <= endIso) pp += runEntryBonus(r);
+  }
+  return pp;
+}
+
+// ---- Sync (eigener Firebase-Knoten .../running) ----
+function scheduleRunningPush() {
+  if (!initialSyncDone) return;
+  clearTimeout(runningPushTimeout);
+  runningPushTimeout = setTimeout(pushRunning, 800);
+}
+async function pushRunning() {
+  const localEntries = runningState.entries || [];
+  // Nie leere Daten pushen, wenn die Cloud echte Läufe hat
+  if (localEntries.length === 0) {
+    try {
+      const check = await xhrGet(`${FIREBASE_URL}/tracker/${SYNC_CODE}/${RUNNING_SYNC_KEY}.json?_t=${Date.now()}`);
+      if (check.status === 200 && check.text && check.text !== 'null') {
+        const c = JSON.parse(check.text);
+        let ce = c && c.entries;
+        if (ce && !Array.isArray(ce)) ce = Object.values(ce);
+        if (ce && ce.length > 0) return;
+      }
+    } catch (e) { /* skip */ }
+  }
+  try {
+    await xhrPut(`${FIREBASE_URL}/tracker/${SYNC_CODE}/${RUNNING_SYNC_KEY}.json`, runningState);
+  } catch (e) { console.error('Running push failed', e); }
+}
+// Cloud-Stand einmischen; gibt true zurück, wenn sich lokal etwas geändert hat.
+function mergeRunningFromCloud(cloudRunning) {
+  if (!cloudRunning) {
+    if ((runningState.entries || []).length > 0) pushRunning();
+    return false;
+  }
+  const cloudEntries = normalizeEntries(cloudRunning.entries);
+  const localEntries = runningState.entries || [];
+  const cUpd = cloudRunning.updatedAt || 0, lUpd = runningState.updatedAt || 0;
+  if (cloudEntries.length === 0 && localEntries.length > 0) { pushRunning(); return false; }
+  if (cloudEntries.length > localEntries.length) {
+    runningState = { entries: cloudEntries, updatedAt: cUpd };
+    persistRunningLocal();
+    return true;
+  }
+  if (cUpd !== lUpd && (cloudEntries.length > 0 || localEntries.length > 0)) {
+    const byId = new Map(localEntries.map(e => [e.id, e]));
+    let merged = [...localEntries];
+    for (const e of cloudEntries) if (!byId.has(e.id)) merged.push(e);
+    merged.sort((a, b) => (a.ts || 0) - (b.ts || 0));
+    runningState = { entries: merged, updatedAt: Math.max(cUpd, lUpd) };
+    persistRunningLocal();
+    pushRunning();
+    return true;
+  }
+  return false;
+}
+
+// Zeit-/Pace-Formatierung
+function fmtPace(paceMin) {
+  if (!isFinite(paceMin) || paceMin <= 0) return '—';
+  let mm = Math.floor(paceMin);
+  let ss = Math.round((paceMin - mm) * 60);
+  if (ss === 60) { mm += 1; ss = 0; }
+  return `${mm}:${String(ss).padStart(2, '0')}`;
+}
+function fmtDuration(sec) {
+  sec = Math.round(sec);
+  const h = Math.floor(sec / 3600);
+  const mm = Math.floor((sec % 3600) / 60);
+  const ss = sec % 60;
+  return h > 0
+    ? `${h}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`
+    : `${mm}:${String(ss).padStart(2, '0')}`;
+}
+function fmtPP(pp) {
+  return (pp >= 0 ? '+' : '') + pp.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' pp';
+}
+
+// ============================================================
 // FIREBASE SYNC — COMPLETELY REWRITTEN
 // ============================================================
 // HARDCODED — no localStorage dependency for connection
@@ -2351,6 +2558,16 @@ async function pullFromCloudAll() {
         }
       }
     }
+
+    // Lauf-Bonus separat synchronisieren (eigener Knoten, nicht in TRACKERS)
+    try {
+      let cloudRunning = bulkData ? bulkData[RUNNING_SYNC_KEY] : null;
+      if (!cloudRunning) {
+        const rr = await xhrGet(`${FIREBASE_URL}/tracker/${SYNC_CODE}/${RUNNING_SYNC_KEY}.json?_t=${Date.now()}`);
+        if (rr.status === 200 && rr.text && rr.text !== 'null') cloudRunning = JSON.parse(rr.text);
+      }
+      if (mergeRunningFromCloud(cloudRunning)) anyChanged = true;
+    } catch (e) { /* running sync skip */ }
 
     if (anyChanged) entriesCollapse = null;
     render();
@@ -2694,14 +2911,25 @@ function switchTab(trackerKey) {
 
   if (trackerKey === 'stats') {
     document.getElementById('trackerView').style.display = 'none';
+    document.getElementById('runningView').style.display = 'none';
     document.getElementById('statsView').style.display = '';
     setAccentColors(STATS_ACCENT);
     document.getElementById('brandTitle').innerHTML = 'STATISTIK <span>&amp; PLAN</span>';
     renderStats();
     return;
   }
+  if (trackerKey === 'running') {
+    document.getElementById('trackerView').style.display = 'none';
+    document.getElementById('statsView').style.display = 'none';
+    document.getElementById('runningView').style.display = '';
+    setAccentColors(RUNNING_ACCENT);
+    document.getElementById('brandTitle').innerHTML = 'LAUF <span>BONUS</span>';
+    renderRunning();
+    return;
+  }
   document.getElementById('trackerView').style.display = '';
   document.getElementById('statsView').style.display = 'none';
+  document.getElementById('runningView').style.display = 'none';
 
   const config = getConfig();
 
@@ -2749,6 +2977,7 @@ function render() {
   // der Statistik-Ansicht erscheint (renderStats übernimmt das für die Statistik selbst).
   if (activeTracker !== 'stats') { try { updateMonthBadges(statsBuildDailyTotals(), true); } catch (e) {} }
   if (activeTracker === 'stats') { renderStats(); return; }
+  if (activeTracker === 'running') { renderRunning(); return; }
   const stats = computeStats();
   const config = getConfig();
   const state = getState();
@@ -3244,7 +3473,10 @@ function statsMonthlyBreakdown(dailyTotals, year, month) {
     perCat[key] = pct;
     sum += pct;
   }
-  return { overall: sum / keys.length, perCat, dim: evalDays };
+  const startIso = prefix + String(startDay).padStart(2, '0');
+  const endIso = prefix + String(dim).padStart(2, '0');
+  const runBonus = runBonusForRange(startIso, endIso);
+  return { overall: sum / keys.length + runBonus, perCat, dim: evalDays, runBonus };
 }
 function statsMonthlyPct(dailyTotals, year, month) {
   return statsMonthlyBreakdown(dailyTotals, year, month).overall;
@@ -3375,8 +3607,95 @@ function renderMonthDetail(dailyTotals) {
   }).join('');
   el.style.display = 'block';
   el.innerHTML = `<div class="stats-detail-label">${MONTH_SHORT_DE[m-1]} ${y} &middot; Plan ${b.overall.toFixed(1)} % &middot; noch nötig, wenn nur EINE Disziplin</div>
+    ${b.runBonus > 0.05 ? `<div class="stats-detail-label">&#x1F3C3; Lauf-Bonus: ${fmtPP(b.runBonus)}</div>` : ''}
     <div class="stats-cat-grid">${catGridHtml}</div>`;
 }
+
+// ============================================================
+// LAUF-BONUS — Ansicht
+// ============================================================
+// Live-Vorschau von Pace + Bonus aus den Eingabefeldern
+function updateRunPreview() {
+  const km = parseFloat(document.getElementById('runKm').value);
+  const min = parseInt(document.getElementById('runMin').value, 10) || 0;
+  const sec = parseInt(document.getElementById('runSec').value, 10) || 0;
+  const el = document.getElementById('runPreview');
+  const totalSec = min * 60 + sec;
+  if (!(km > 0) || totalSec <= 0) {
+    el.innerHTML = 'Pace &amp; Bonus erscheinen hier';
+    return;
+  }
+  const pace = (totalSec / 60) / km;
+  const bonus = runBonusPP(km, pace);
+  el.innerHTML = `Pace <b style="color:var(--accent)">${fmtPace(pace)}</b> /km &middot; Bonus <b style="color:var(--accent)">${fmtPP(bonus)}</b>`;
+}
+
+function renderRunning() {
+  const today = todayISO();
+  const dateInput = document.getElementById('runDate');
+  if (dateInput && !dateInput.value) dateInput.value = today;
+
+  // Bonus diese Woche / diesen Monat
+  const curMonday = mondayOf(today);
+  const weekBonus = runBonusForRange(curMonday, addDays(curMonday, 6));
+  document.getElementById('runWeekBonus').textContent = fmtPP(weekBonus);
+  document.getElementById('runWeekRange').textContent = fmtDateDe(curMonday) + '–' + fmtDateDe(addDays(curMonday, 6));
+
+  const y = Number(today.slice(0, 4)), m = Number(today.slice(5, 7));
+  const dim = daysInMonth(y, m), sd = monthEvalStartDay(y, m);
+  const prefix = `${y}-${String(m).padStart(2, '0')}-`;
+  const monthBonus = runBonusForRange(prefix + String(sd).padStart(2, '0'), prefix + String(dim).padStart(2, '0'));
+  document.getElementById('runMonthBonus').textContent = fmtPP(monthBonus);
+  document.getElementById('runMonthName').textContent = MONTH_SHORT_DE[m - 1] + ' ' + y;
+
+  // Liste (neueste zuerst)
+  const list = document.getElementById('runList');
+  const runs = [...runningState.entries].sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  if (runs.length === 0) {
+    list.innerHTML = '<div class="empty">Noch keine Läufe.</div>';
+  } else {
+    list.innerHTML = runs.map(r => {
+      const pace = runPaceMinPerKm(r);
+      const bonus = runEntryBonus(r);
+      const kmStr = r.km.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+      return `<div class="entry-item">
+        <span>${fmtDateDe(r.date)} &middot; <b>${kmStr} km</b> &middot; ${fmtDuration(r.sec)} min &middot; ${fmtPace(pace)}/km &middot; <span style="color:var(--accent)">${fmtPP(bonus)}</span></span>
+        <div class="entry-actions">
+          <button class="btn-small danger" onclick="deleteRunEntry('${r.id}')">x</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+}
+
+function addRun() {
+  const km = parseFloat(document.getElementById('runKm').value);
+  const min = parseInt(document.getElementById('runMin').value, 10) || 0;
+  const sec = parseInt(document.getElementById('runSec').value, 10) || 0;
+  const date = document.getElementById('runDate').value;
+  const totalSec = min * 60 + sec;
+  if (!(km > 0)) { alert('Bitte gültige Distanz (km) eingeben'); return; }
+  if (totalSec <= 0) { alert('Bitte Laufzeit (Minuten/Sekunden) eingeben'); return; }
+  if (!date) { alert('Bitte Datum wählen'); return; }
+  const id = 'run_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+  runningState.entries.push({ id, date, km, sec: totalSec, ts: Date.now() });
+  saveRunning();
+  try { updateMonthBadges(statsBuildDailyTotals(), true); } catch (e) {}
+  document.getElementById('runKm').value = '';
+  document.getElementById('runMin').value = '';
+  document.getElementById('runSec').value = '';
+  updateRunPreview();
+  renderRunning();
+}
+
+function deleteRunEntry(id) {
+  if (!confirm('Diesen Lauf wirklich löschen?')) return;
+  runningState.entries = runningState.entries.filter(e => e.id !== id);
+  saveRunning();
+  try { updateMonthBadges(statsBuildDailyTotals(), true); } catch (e) {}
+  renderRunning();
+}
+window.deleteRunEntry = deleteRunEntry;
 
 // Build { trackerKey: { dateISO: totalCountThatDay } } across ALL trackers
 function statsBuildDailyTotals() {
@@ -3423,7 +3742,8 @@ function statsWeeklyPct(dailyTotals, mondayIso) {
     perCat[key] = pct;
     sum += pct;
   }
-  return { overall: sum / keys.length, perCat };
+  const runBonus = runBonusForRange(mondayIso, addDays(mondayIso, 6));
+  return { overall: sum / keys.length + runBonus, perCat, runBonus };
 }
 
 // A week (given by its Monday) is "geschafft" once the overall average across ALL categories
@@ -3500,6 +3820,14 @@ function renderStats() {
   heroFill.style.background = curBarColor;
   document.getElementById('statsWeekBadge').style.display = curComplete ? '' : 'none';
 
+  const weekRunEl = document.getElementById('statsWeekRunBonus');
+  if (curWeek.runBonus > 0.05) {
+    weekRunEl.style.display = '';
+    weekRunEl.innerHTML = '&#x1F3C3; Lauf-Bonus diese Woche: ' + fmtPP(curWeek.runBonus);
+  } else {
+    weekRunEl.style.display = 'none';
+  }
+
   document.getElementById('statsWeekCatGrid').innerHTML = Object.keys(TRACKERS).map(key => {
     const tk = TRACKERS[key];
     const pct = curWeek.perCat[key];
@@ -3570,6 +3898,7 @@ function renderStats() {
         <div class="stats-row-detail">
           <div class="stats-detail-label">Tage dieser Woche</div>
           <div class="stats-mini-days">${daysHtml}</div>
+          ${w.runBonus > 0.05 ? `<div class="stats-detail-label">&#x1F3C3; Lauf-Bonus: ${fmtPP(w.runBonus)}</div>` : ''}
           <div class="stats-detail-label">Kategorien dieser Woche</div>
           <div class="stats-cat-grid">${catGridHtml}</div>
         </div>
@@ -3810,6 +4139,14 @@ document.getElementById('monthCollection').addEventListener('click', (e) => {
   if (!cell || !cell.dataset.monthkey) return;
   statsOpenMonthKey = (statsOpenMonthKey === cell.dataset.monthkey) ? null : cell.dataset.monthkey;
   renderMonthCollection(statsBuildDailyTotals());
+});
+
+// Lauf-Bonus: Eingabe-Handler
+document.getElementById('runAddBtn').addEventListener('click', addRun);
+['runKm', 'runMin', 'runSec'].forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener('input', updateRunPreview);
+  el.addEventListener('keydown', e => { if (e.key === 'Enter') addRun(); });
 });
 
 // Init sync UI
