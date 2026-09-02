@@ -1514,9 +1514,9 @@
       </div>
       <div class="input-card" style="margin-bottom:16px">
         <p style="font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.6;color:var(--text-dim);margin:0 0 14px">
-          Joggen ist keine eigene Kategorie &mdash; ein Lauf gibt stattdessen <b>Bonus-Prozentpunkte</b> direkt auf dein <b>Wochen-</b> und <b>Monatsbadge</b>.
-          Formel: <span style="color:var(--accent)">km &times; Pace-Faktor</span>, Faktor&nbsp;=&nbsp;6:00&nbsp;/&nbsp;deine&nbsp;Pace (gedeckelt 0,6&ndash;1,6).
-          Je mehr km und je schneller, desto mehr pp.
+          Joggen ist keine eigene Kategorie &mdash; ein Lauf gibt stattdessen <b>Bonus-Prozentpunkte</b> auf <b>Tag</b>, <b>Woche</b> und <b>Monat</b>.
+          Grundwert: <span style="color:var(--accent)">km &times; Pace-Faktor</span> (Faktor&nbsp;=&nbsp;6:00&nbsp;/&nbsp;deine&nbsp;Pace, gedeckelt 0,6&ndash;1,6).
+          Weil ein Lauf ein Tages-Ereignis ist, z&auml;hlt er am <b>Tag</b> voll (&times;7), auf die <b>Woche</b> mit dem Grundwert und auf den <b>Monat</b> entsprechend weniger.
         </p>
         <div class="input-row">
           <div class="input-group">
@@ -2186,6 +2186,11 @@ const RUN_REF_PACE = 6.0;   // min/km, bei der der Pace-Faktor genau 1,0 ist
 const RUN_WEIGHT   = 1.0;   // Wertigkeit (10 km @ 6:00 → 10,0 pp)
 const RUN_FACTOR_MIN = 0.6; // sehr langsam
 const RUN_FACTOR_MAX = 1.6; // sehr schnell
+// Ein Lauf ist ein TAGES-Ereignis. Da das Wochen-Overall der Durchschnitt aus 7
+// Tagen ist (und das Monats-Overall aus ~30), zählt ein Lauf an seinem Tag 7× so
+// stark wie sein Wochen-Beitrag. Woche/Monat ergeben sich dann als Ø der Tage →
+// automatisch korrekt skaliert (Woche > Monat für denselben Lauf).
+const DAYS_PER_WEEK = 7;
 const RUNNING_ACCENT = { accent: '#ff8c42', accent2: '#ffb27a' };
 
 let runningState = { entries: [], updatedAt: 0 };
@@ -2219,20 +2224,36 @@ function runPaceMinPerKm(r) {
   if (!r.km || r.km <= 0) return Infinity;
   return (r.sec / 60) / r.km;
 }
-// Bonus-Prozentpunkte für gegebene km + Pace
+// Grundwert eines Laufs in "Wochen-Prozentpunkten" = km × Pace-Faktor × Gewicht.
+// Das ist der Beitrag, den EIN Lauf zum WOCHEN-Overall leistet.
 function runBonusPP(km, paceMin) {
   if (!km || km <= 0 || !isFinite(paceMin) || paceMin <= 0) return 0;
   const factor = Math.max(RUN_FACTOR_MIN, Math.min(RUN_FACTOR_MAX, RUN_REF_PACE / paceMin));
   return km * factor * RUN_WEIGHT;
 }
-function runEntryBonus(r) { return runBonusPP(r.km, runPaceMinPerKm(r)); }
-// Summe der Bonus-pp aller Läufe im Datumsbereich [startIso, endIso] (inkl.)
-function runBonusForRange(startIso, endIso) {
+// Wochen-Beitrag eines einzelnen Laufs (= Grundwert)
+function runEntryWeekPP(r) { return runBonusPP(r.km, runPaceMinPerKm(r)); }
+// Tages-Beitrag: an SEINEM Tag zählt der Lauf 7× so stark (Woche = Ø aus 7 Tagen).
+function runEntryDayPP(r) { return runEntryWeekPP(r) * DAYS_PER_WEEK; }
+// Gewertete Tage des Monats, zu dem ein Datum gehört (Startmonat ab monthEvalStartDay)
+function runMonthEvalDays(iso) {
+  const y = Number(iso.slice(0, 4)), m = Number(iso.slice(5, 7));
+  return daysInMonth(y, m) - monthEvalStartDay(y, m) + 1;
+}
+// Monats-Beitrag eines einzelnen Laufs (= Tages-Beitrag ÷ gewertete Monatstage)
+function runEntryMonthPP(r) { return runEntryDayPP(r) / runMonthEvalDays(r.date); }
+// Summe der TAGES-Boni aller Läufe an einem Datum
+function runDayBonus(iso) {
   let pp = 0;
-  for (const r of runningState.entries) {
-    if (r.date >= startIso && r.date <= endIso) pp += runEntryBonus(r);
-  }
+  for (const r of runningState.entries) if (r.date === iso) pp += runEntryDayPP(r);
   return pp;
+}
+// Bonus für eine Periode [startIso..endIso] mit periodDays gewerteten Tagen.
+// Perioden-Overall = Ø der Tages-Overalls → Bonus = (Σ Tages-Boni) ÷ periodDays.
+function runPeriodBonus(startIso, endIso, periodDays) {
+  let sum = 0, d = startIso;
+  while (d <= endIso) { sum += runDayBonus(d); d = addDays(d, 1); }
+  return periodDays > 0 ? sum / periodDays : 0;
 }
 
 // ---- Sync (eigener Firebase-Knoten .../running) ----
@@ -3475,7 +3496,7 @@ function statsMonthlyBreakdown(dailyTotals, year, month) {
   }
   const startIso = prefix + String(startDay).padStart(2, '0');
   const endIso = prefix + String(dim).padStart(2, '0');
-  const runBonus = runBonusForRange(startIso, endIso);
+  const runBonus = runPeriodBonus(startIso, endIso, evalDays);
   return { overall: sum / keys.length + runBonus, perCat, dim: evalDays, runBonus };
 }
 function statsMonthlyPct(dailyTotals, year, month) {
@@ -3626,8 +3647,15 @@ function updateRunPreview() {
     return;
   }
   const pace = (totalSec / 60) / km;
-  const bonus = runBonusPP(km, pace);
-  el.innerHTML = `Pace <b style="color:var(--accent)">${fmtPace(pace)}</b> /km &middot; Bonus <b style="color:var(--accent)">${fmtPP(bonus)}</b>`;
+  const weekPP = runBonusPP(km, pace);
+  const dayPP = weekPP * DAYS_PER_WEEK;
+  const today = todayISO();
+  const evalDays = runMonthEvalDays(document.getElementById('runDate').value || today);
+  const monthPP = dayPP / evalDays;
+  el.innerHTML = `Pace <b style="color:var(--accent)">${fmtPace(pace)}</b> /km &middot; `
+    + `Tag <b style="color:var(--accent)">${fmtPP(dayPP)}</b> &middot; `
+    + `Woche <b style="color:var(--accent)">${fmtPP(weekPP)}</b> &middot; `
+    + `Monat <b style="color:var(--accent)">${fmtPP(monthPP)}</b>`;
 }
 
 function renderRunning() {
@@ -3637,14 +3665,15 @@ function renderRunning() {
 
   // Bonus diese Woche / diesen Monat
   const curMonday = mondayOf(today);
-  const weekBonus = runBonusForRange(curMonday, addDays(curMonday, 6));
+  const weekBonus = runPeriodBonus(curMonday, addDays(curMonday, 6), 7);
   document.getElementById('runWeekBonus').textContent = fmtPP(weekBonus);
   document.getElementById('runWeekRange').textContent = fmtDateDe(curMonday) + '–' + fmtDateDe(addDays(curMonday, 6));
 
   const y = Number(today.slice(0, 4)), m = Number(today.slice(5, 7));
   const dim = daysInMonth(y, m), sd = monthEvalStartDay(y, m);
+  const evalDays = dim - sd + 1;
   const prefix = `${y}-${String(m).padStart(2, '0')}-`;
-  const monthBonus = runBonusForRange(prefix + String(sd).padStart(2, '0'), prefix + String(dim).padStart(2, '0'));
+  const monthBonus = runPeriodBonus(prefix + String(sd).padStart(2, '0'), prefix + String(dim).padStart(2, '0'), evalDays);
   document.getElementById('runMonthBonus').textContent = fmtPP(monthBonus);
   document.getElementById('runMonthName').textContent = MONTH_SHORT_DE[m - 1] + ' ' + y;
 
@@ -3656,10 +3685,11 @@ function renderRunning() {
   } else {
     list.innerHTML = runs.map(r => {
       const pace = runPaceMinPerKm(r);
-      const bonus = runEntryBonus(r);
       const kmStr = r.km.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+      const dayPP = runEntryDayPP(r), weekPP = runEntryWeekPP(r), monthPP = runEntryMonthPP(r);
       return `<div class="entry-item">
-        <span>${fmtDateDe(r.date)} &middot; <b>${kmStr} km</b> &middot; ${fmtDuration(r.sec)} min &middot; ${fmtPace(pace)}/km &middot; <span style="color:var(--accent)">${fmtPP(bonus)}</span></span>
+        <span>${fmtDateDe(r.date)} &middot; <b>${kmStr} km</b> &middot; ${fmtDuration(r.sec)} min &middot; ${fmtPace(pace)}/km
+          &middot; <span style="color:var(--accent)">Tag ${fmtPP(dayPP)} &middot; Wo ${fmtPP(weekPP)} &middot; Mo ${fmtPP(monthPP)}</span></span>
         <div class="entry-actions">
           <button class="btn-small danger" onclick="deleteRunEntry('${r.id}')">x</button>
         </div>
@@ -3724,7 +3754,8 @@ function statsDailyPct(dailyTotals, iso) {
     perCat[key] = pct;
     sum += pct;
   }
-  return { overall: sum / keys.length, perCat };
+  const runBonus = runDayBonus(iso);
+  return { overall: sum / keys.length + runBonus, perCat, runBonus };
 }
 
 // % of the combined weekly plan (Mon-Sun) achieved for the week starting at mondayIso
@@ -3742,7 +3773,7 @@ function statsWeeklyPct(dailyTotals, mondayIso) {
     perCat[key] = pct;
     sum += pct;
   }
-  const runBonus = runBonusForRange(mondayIso, addDays(mondayIso, 6));
+  const runBonus = runPeriodBonus(mondayIso, addDays(mondayIso, 6), 7);
   return { overall: sum / keys.length + runBonus, perCat, runBonus };
 }
 
