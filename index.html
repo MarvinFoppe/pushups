@@ -1310,6 +1310,7 @@
     <button class="tab" data-tracker="stretching">&#x1F9D8; Dehnen</button>
     <button class="tab" data-tracker="stats">&#x1F4CA; Statistik</button>
     <button class="tab tab-mini" data-tracker="running" title="Lauf-Bonus">&#x1F3C3;</button>
+    <button class="tab tab-mini" data-tracker="gym" title="Studio-Bonus">&#x1F4AA;</button>
   </div>
 
   <div id="trackerView">
@@ -1569,6 +1570,60 @@
     </div>
   </div>
   <!-- /runningView -->
+
+  <!-- STUDIO-BONUS TAB (versteckt) -->
+  <div id="gymView" style="display:none">
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title"><span class="section-title-accent">&#x203A;</span> Studio-Bonus</div>
+      </div>
+      <div class="input-card" style="margin-bottom:16px">
+        <p style="font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.6;color:var(--text-dim);margin:0 0 14px">
+          Fitnessstudio ist keine eigene Kategorie &mdash; es gibt <b>Bonus-Prozentpunkte</b> auf <b>Tag</b>, <b>Woche</b> und <b>Monat</b>.
+          Umrechnung: <span style="color:var(--accent)">6&nbsp;&Uuml;bungen = 1&nbsp;Std. Laufen (10&nbsp;km @ 6:00)</span> = 10&nbsp;pp.
+          Ein Studiotag ist ein <b>Tages-Ereignis</b>: er z&auml;hlt am <b>Tag</b> voll (&times;7), auf die <b>Woche</b> mit dem Grundwert und auf den <b>Monat</b> entsprechend weniger.
+        </p>
+        <div class="input-row">
+          <div class="input-group">
+            <label for="gymCount">Anzahl &Uuml;bungen</label>
+            <input type="number" id="gymCount" min="1" step="1" placeholder="z. B. 6">
+          </div>
+          <div class="input-group">
+            <label for="gymDate">Datum</label>
+            <input type="date" id="gymDate">
+          </div>
+        </div>
+        <div id="gymPreview" style="text-align:center;padding:8px 0 12px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-faint)">Bonus erscheint hier</div>
+        <button class="btn-primary" id="gymAddBtn">+ Studio-Einheit hinzufügen</button>
+      </div>
+
+      <div class="stats-hero" style="margin-bottom:16px">
+        <div class="stats-big-label">Aktueller Studio-Bonus</div>
+        <div class="stats-cat-grid" style="margin-top:10px">
+          <div class="stats-cat">
+            <div class="stats-cat-name">&#x1F4AA; Diese Woche</div>
+            <div class="stats-cat-pct" id="gymWeekBonus">+0,0 pp</div>
+            <div class="stats-cat-remaining" id="gymWeekRange">&mdash;</div>
+          </div>
+          <div class="stats-cat">
+            <div class="stats-cat-name">&#x1F4C5; Dieser Monat</div>
+            <div class="stats-cat-pct" id="gymMonthBonus">+0,0 pp</div>
+            <div class="stats-cat-remaining" id="gymMonthName">&mdash;</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title"><span class="section-title-accent">&#x203A;</span> Deine Studio-Einheiten</div>
+      </div>
+      <div class="entries-card" id="gymList">
+        <div class="empty">Noch keine Studio-Einheiten.</div>
+      </div>
+    </div>
+  </div>
+  <!-- /gymView -->
 
   <div class="footer">
     <div id="footerLabel">Fitness Tracker &middot; Local Storage</div>
@@ -2308,6 +2363,112 @@ function mergeRunningFromCloud(cloudRunning) {
   return false;
 }
 
+// ============================================================
+// STUDIO-BONUS — Fitnessstudio ist KEINE eigene Kategorie, sondern gibt
+// Bonus-Prozentpunkte direkt auf Tag/Woche/Monat — analog zum Lauf-Bonus.
+// Umrechnung: 6 Übungen = 1 Std. Laufen (10 km @ 6:00) = 10 Wochen-pp.
+// Eigener Speicher, eigener Sync-Key. Ein Studiotag ist ein TAGES-Ereignis.
+// ============================================================
+const GYM_STORAGE_KEY = 'gym_bonus_v1';
+const GYM_SYNC_KEY = 'gym';
+const GYM_PP_PER_EXERCISE = 10 / 6; // 6 Übungen → 10 pp (Woche), 1 Übung ≈ 1,667 pp
+const GYM_ACCENT = { accent: '#8a5cf6', accent2: '#b18cff' };
+
+let gymState = { entries: [], updatedAt: 0 };
+let gymPushTimeout = null;
+
+function loadGym() {
+  try {
+    const raw = localStorage.getItem(GYM_STORAGE_KEY);
+    if (raw) {
+      const s = JSON.parse(raw);
+      gymState = { entries: Array.isArray(s.entries) ? s.entries : [], updatedAt: s.updatedAt || 0 };
+    }
+  } catch (e) { console.warn('Load gym failed', e); gymState = { entries: [], updatedAt: 0 }; }
+}
+loadGym();
+
+function persistGymLocal() {
+  try { localStorage.setItem(GYM_STORAGE_KEY, JSON.stringify(gymState)); }
+  catch (e) { console.error('Gym persist failed', e); }
+}
+function saveGym() {
+  gymState.updatedAt = Date.now();
+  persistGymLocal();
+  scheduleGymPush();
+}
+
+// Grundwert einer Studio-Einheit in "Wochen-Prozentpunkten" = Übungen × pp/Übung.
+function gymBonusPP(count) {
+  if (!count || count <= 0) return 0;
+  return count * GYM_PP_PER_EXERCISE;
+}
+function gymEntryWeekPP(g) { return gymBonusPP(g.count); }
+// Tages-Beitrag: an SEINEM Tag zählt die Einheit 7× so stark (Woche = Ø aus 7 Tagen).
+function gymEntryDayPP(g) { return gymEntryWeekPP(g) * DAYS_PER_WEEK; }
+// Monats-Beitrag (= Tages-Beitrag ÷ gewertete Monatstage) — teilt den Datums-Helfer mit dem Lauf-Bonus.
+function gymEntryMonthPP(g) { return gymEntryDayPP(g) / runMonthEvalDays(g.date); }
+function gymDayBonus(iso) {
+  let pp = 0;
+  for (const g of gymState.entries) if (g.date === iso) pp += gymEntryDayPP(g);
+  return pp;
+}
+function gymPeriodBonus(startIso, endIso, periodDays) {
+  let sum = 0, d = startIso;
+  while (d <= endIso) { sum += gymDayBonus(d); d = addDays(d, 1); }
+  return periodDays > 0 ? sum / periodDays : 0;
+}
+
+// ---- Sync (eigener Firebase-Knoten .../gym) ----
+function scheduleGymPush() {
+  if (!initialSyncDone) return;
+  clearTimeout(gymPushTimeout);
+  gymPushTimeout = setTimeout(pushGym, 800);
+}
+async function pushGym() {
+  const localEntries = gymState.entries || [];
+  if (localEntries.length === 0) {
+    try {
+      const check = await xhrGet(`${FIREBASE_URL}/tracker/${SYNC_CODE}/${GYM_SYNC_KEY}.json?_t=${Date.now()}`);
+      if (check.status === 200 && check.text && check.text !== 'null') {
+        const c = JSON.parse(check.text);
+        let ce = c && c.entries;
+        if (ce && !Array.isArray(ce)) ce = Object.values(ce);
+        if (ce && ce.length > 0) return;
+      }
+    } catch (e) { /* skip */ }
+  }
+  try {
+    await xhrPut(`${FIREBASE_URL}/tracker/${SYNC_CODE}/${GYM_SYNC_KEY}.json`, gymState);
+  } catch (e) { console.error('Gym push failed', e); }
+}
+function mergeGymFromCloud(cloudGym) {
+  if (!cloudGym) {
+    if ((gymState.entries || []).length > 0) pushGym();
+    return false;
+  }
+  const cloudEntries = normalizeEntries(cloudGym.entries);
+  const localEntries = gymState.entries || [];
+  const cUpd = cloudGym.updatedAt || 0, lUpd = gymState.updatedAt || 0;
+  if (cloudEntries.length === 0 && localEntries.length > 0) { pushGym(); return false; }
+  if (cloudEntries.length > localEntries.length) {
+    gymState = { entries: cloudEntries, updatedAt: cUpd };
+    persistGymLocal();
+    return true;
+  }
+  if (cUpd !== lUpd && (cloudEntries.length > 0 || localEntries.length > 0)) {
+    const byId = new Map(localEntries.map(e => [e.id, e]));
+    let merged = [...localEntries];
+    for (const e of cloudEntries) if (!byId.has(e.id)) merged.push(e);
+    merged.sort((a, b) => (a.ts || 0) - (b.ts || 0));
+    gymState = { entries: merged, updatedAt: Math.max(cUpd, lUpd) };
+    persistGymLocal();
+    pushGym();
+    return true;
+  }
+  return false;
+}
+
 // Zeit-/Pace-Formatierung
 function fmtPace(paceMin) {
   if (!isFinite(paceMin) || paceMin <= 0) return '—';
@@ -2589,6 +2750,16 @@ async function pullFromCloudAll() {
       }
       if (mergeRunningFromCloud(cloudRunning)) anyChanged = true;
     } catch (e) { /* running sync skip */ }
+
+    // Studio-Bonus separat synchronisieren (eigener Knoten, nicht in TRACKERS)
+    try {
+      let cloudGym = bulkData ? bulkData[GYM_SYNC_KEY] : null;
+      if (!cloudGym) {
+        const gg = await xhrGet(`${FIREBASE_URL}/tracker/${SYNC_CODE}/${GYM_SYNC_KEY}.json?_t=${Date.now()}`);
+        if (gg.status === 200 && gg.text && gg.text !== 'null') cloudGym = JSON.parse(gg.text);
+      }
+      if (mergeGymFromCloud(cloudGym)) anyChanged = true;
+    } catch (e) { /* gym sync skip */ }
 
     if (anyChanged) entriesCollapse = null;
     render();
@@ -2933,6 +3104,7 @@ function switchTab(trackerKey) {
   if (trackerKey === 'stats') {
     document.getElementById('trackerView').style.display = 'none';
     document.getElementById('runningView').style.display = 'none';
+    document.getElementById('gymView').style.display = 'none';
     document.getElementById('statsView').style.display = '';
     setAccentColors(STATS_ACCENT);
     document.getElementById('brandTitle').innerHTML = 'STATISTIK <span>&amp; PLAN</span>';
@@ -2942,15 +3114,27 @@ function switchTab(trackerKey) {
   if (trackerKey === 'running') {
     document.getElementById('trackerView').style.display = 'none';
     document.getElementById('statsView').style.display = 'none';
+    document.getElementById('gymView').style.display = 'none';
     document.getElementById('runningView').style.display = '';
     setAccentColors(RUNNING_ACCENT);
     document.getElementById('brandTitle').innerHTML = 'LAUF <span>BONUS</span>';
     renderRunning();
     return;
   }
+  if (trackerKey === 'gym') {
+    document.getElementById('trackerView').style.display = 'none';
+    document.getElementById('statsView').style.display = 'none';
+    document.getElementById('runningView').style.display = 'none';
+    document.getElementById('gymView').style.display = '';
+    setAccentColors(GYM_ACCENT);
+    document.getElementById('brandTitle').innerHTML = 'STUDIO <span>BONUS</span>';
+    renderGym();
+    return;
+  }
   document.getElementById('trackerView').style.display = '';
   document.getElementById('statsView').style.display = 'none';
   document.getElementById('runningView').style.display = 'none';
+  document.getElementById('gymView').style.display = 'none';
 
   const config = getConfig();
 
@@ -2999,6 +3183,7 @@ function render() {
   if (activeTracker !== 'stats') { try { updateMonthBadges(statsBuildDailyTotals(), true); } catch (e) {} }
   if (activeTracker === 'stats') { renderStats(); return; }
   if (activeTracker === 'running') { renderRunning(); return; }
+  if (activeTracker === 'gym') { renderGym(); return; }
   const stats = computeStats();
   const config = getConfig();
   const state = getState();
@@ -3497,7 +3682,8 @@ function statsMonthlyBreakdown(dailyTotals, year, month) {
   const startIso = prefix + String(startDay).padStart(2, '0');
   const endIso = prefix + String(dim).padStart(2, '0');
   const runBonus = runPeriodBonus(startIso, endIso, evalDays);
-  return { overall: sum / keys.length + runBonus, perCat, dim: evalDays, runBonus };
+  const gymBonus = gymPeriodBonus(startIso, endIso, evalDays);
+  return { overall: sum / keys.length + runBonus + gymBonus, perCat, dim: evalDays, runBonus, gymBonus };
 }
 function statsMonthlyPct(dailyTotals, year, month) {
   return statsMonthlyBreakdown(dailyTotals, year, month).overall;
@@ -3629,6 +3815,7 @@ function renderMonthDetail(dailyTotals) {
   el.style.display = 'block';
   el.innerHTML = `<div class="stats-detail-label">${MONTH_SHORT_DE[m-1]} ${y} &middot; Plan ${b.overall.toFixed(1)} % &middot; noch nötig, wenn nur EINE Disziplin</div>
     ${b.runBonus > 0.05 ? `<div class="stats-detail-label">&#x1F3C3; Lauf-Bonus: ${fmtPP(b.runBonus)}</div>` : ''}
+    ${b.gymBonus > 0.05 ? `<div class="stats-detail-label">&#x1F4AA; Studio-Bonus: ${fmtPP(b.gymBonus)}</div>` : ''}
     <div class="stats-cat-grid">${catGridHtml}</div>`;
 }
 
@@ -3727,6 +3914,86 @@ function deleteRunEntry(id) {
 }
 window.deleteRunEntry = deleteRunEntry;
 
+// ============================================================
+// STUDIO-BONUS — Ansicht
+// ============================================================
+function updateGymPreview() {
+  const count = parseInt(document.getElementById('gymCount').value, 10);
+  const el = document.getElementById('gymPreview');
+  if (!(count > 0)) {
+    el.innerHTML = 'Bonus erscheint hier';
+    return;
+  }
+  const weekPP = gymBonusPP(count);
+  const dayPP = weekPP * DAYS_PER_WEEK;
+  const today = todayISO();
+  const evalDays = runMonthEvalDays(document.getElementById('gymDate').value || today);
+  const monthPP = dayPP / evalDays;
+  el.innerHTML = `${count} &Uuml;bungen &middot; `
+    + `Tag <b style="color:var(--accent)">${fmtPP(dayPP)}</b> &middot; `
+    + `Woche <b style="color:var(--accent)">${fmtPP(weekPP)}</b> &middot; `
+    + `Monat <b style="color:var(--accent)">${fmtPP(monthPP)}</b>`;
+}
+
+function renderGym() {
+  const today = todayISO();
+  const dateInput = document.getElementById('gymDate');
+  if (dateInput && !dateInput.value) dateInput.value = today;
+
+  const curMonday = mondayOf(today);
+  const weekBonus = gymPeriodBonus(curMonday, addDays(curMonday, 6), 7);
+  document.getElementById('gymWeekBonus').textContent = fmtPP(weekBonus);
+  document.getElementById('gymWeekRange').textContent = fmtDateDe(curMonday) + '–' + fmtDateDe(addDays(curMonday, 6));
+
+  const y = Number(today.slice(0, 4)), m = Number(today.slice(5, 7));
+  const dim = daysInMonth(y, m), sd = monthEvalStartDay(y, m);
+  const evalDays = dim - sd + 1;
+  const prefix = `${y}-${String(m).padStart(2, '0')}-`;
+  const monthBonus = gymPeriodBonus(prefix + String(sd).padStart(2, '0'), prefix + String(dim).padStart(2, '0'), evalDays);
+  document.getElementById('gymMonthBonus').textContent = fmtPP(monthBonus);
+  document.getElementById('gymMonthName').textContent = MONTH_SHORT_DE[m - 1] + ' ' + y;
+
+  const list = document.getElementById('gymList');
+  const gyms = [...gymState.entries].sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  if (gyms.length === 0) {
+    list.innerHTML = '<div class="empty">Noch keine Studio-Einheiten.</div>';
+  } else {
+    list.innerHTML = gyms.map(g => {
+      const dayPP = gymEntryDayPP(g), weekPP = gymEntryWeekPP(g), monthPP = gymEntryMonthPP(g);
+      return `<div class="entry-item">
+        <span>${fmtDateDe(g.date)} &middot; <b>${g.count} &Uuml;bungen</b>
+          &middot; <span style="color:var(--accent)">Tag ${fmtPP(dayPP)} &middot; Wo ${fmtPP(weekPP)} &middot; Mo ${fmtPP(monthPP)}</span></span>
+        <div class="entry-actions">
+          <button class="btn-small danger" onclick="deleteGymEntry('${g.id}')">x</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+}
+
+function addGym() {
+  const count = parseInt(document.getElementById('gymCount').value, 10);
+  const date = document.getElementById('gymDate').value;
+  if (!(count > 0)) { alert('Bitte gültige Anzahl Übungen eingeben'); return; }
+  if (!date) { alert('Bitte Datum wählen'); return; }
+  const id = 'gym_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+  gymState.entries.push({ id, date, count, ts: Date.now() });
+  saveGym();
+  try { updateMonthBadges(statsBuildDailyTotals(), true); } catch (e) {}
+  document.getElementById('gymCount').value = '';
+  updateGymPreview();
+  renderGym();
+}
+
+function deleteGymEntry(id) {
+  if (!confirm('Diese Studio-Einheit wirklich löschen?')) return;
+  gymState.entries = gymState.entries.filter(e => e.id !== id);
+  saveGym();
+  try { updateMonthBadges(statsBuildDailyTotals(), true); } catch (e) {}
+  renderGym();
+}
+window.deleteGymEntry = deleteGymEntry;
+
 // Build { trackerKey: { dateISO: totalCountThatDay } } across ALL trackers
 function statsBuildDailyTotals() {
   const result = {};
@@ -3755,7 +4022,8 @@ function statsDailyPct(dailyTotals, iso) {
     sum += pct;
   }
   const runBonus = runDayBonus(iso);
-  return { overall: sum / keys.length + runBonus, perCat, runBonus };
+  const gymBonus = gymDayBonus(iso);
+  return { overall: sum / keys.length + runBonus + gymBonus, perCat, runBonus, gymBonus };
 }
 
 // % of the combined weekly plan (Mon-Sun) achieved for the week starting at mondayIso
@@ -3774,7 +4042,8 @@ function statsWeeklyPct(dailyTotals, mondayIso) {
     sum += pct;
   }
   const runBonus = runPeriodBonus(mondayIso, addDays(mondayIso, 6), 7);
-  return { overall: sum / keys.length + runBonus, perCat, runBonus };
+  const gymBonus = gymPeriodBonus(mondayIso, addDays(mondayIso, 6), 7);
+  return { overall: sum / keys.length + runBonus + gymBonus, perCat, runBonus, gymBonus };
 }
 
 // A week (given by its Monday) is "geschafft" once the overall average across ALL categories
@@ -3852,9 +4121,12 @@ function renderStats() {
   document.getElementById('statsWeekBadge').style.display = curComplete ? '' : 'none';
 
   const weekRunEl = document.getElementById('statsWeekRunBonus');
-  if (curWeek.runBonus > 0.05) {
+  const bonusLines = [];
+  if (curWeek.runBonus > 0.05) bonusLines.push('&#x1F3C3; Lauf-Bonus diese Woche: ' + fmtPP(curWeek.runBonus));
+  if (curWeek.gymBonus > 0.05) bonusLines.push('&#x1F4AA; Studio-Bonus diese Woche: ' + fmtPP(curWeek.gymBonus));
+  if (bonusLines.length) {
     weekRunEl.style.display = '';
-    weekRunEl.innerHTML = '&#x1F3C3; Lauf-Bonus diese Woche: ' + fmtPP(curWeek.runBonus);
+    weekRunEl.innerHTML = bonusLines.join('<br>');
   } else {
     weekRunEl.style.display = 'none';
   }
@@ -3930,6 +4202,7 @@ function renderStats() {
           <div class="stats-detail-label">Tage dieser Woche</div>
           <div class="stats-mini-days">${daysHtml}</div>
           ${w.runBonus > 0.05 ? `<div class="stats-detail-label">&#x1F3C3; Lauf-Bonus: ${fmtPP(w.runBonus)}</div>` : ''}
+          ${w.gymBonus > 0.05 ? `<div class="stats-detail-label">&#x1F4AA; Studio-Bonus: ${fmtPP(w.gymBonus)}</div>` : ''}
           <div class="stats-detail-label">Kategorien dieser Woche</div>
           <div class="stats-cat-grid">${catGridHtml}</div>
         </div>
@@ -4178,6 +4451,14 @@ document.getElementById('runAddBtn').addEventListener('click', addRun);
   const el = document.getElementById(id);
   el.addEventListener('input', updateRunPreview);
   el.addEventListener('keydown', e => { if (e.key === 'Enter') addRun(); });
+});
+
+// Studio-Bonus: Eingabe-Handler
+document.getElementById('gymAddBtn').addEventListener('click', addGym);
+['gymCount'].forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener('input', updateGymPreview);
+  el.addEventListener('keydown', e => { if (e.key === 'Enter') addGym(); });
 });
 
 // Init sync UI
