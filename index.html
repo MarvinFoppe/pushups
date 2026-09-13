@@ -1145,6 +1145,47 @@
     min-width: 38px;
     text-align: right;
   }
+  /* Krank-Tag-Toggle pro Tageszeile */
+  .stats-sick-btn {
+    flex: 0 0 auto;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 7px;
+    background: rgba(255,255,255,0.04);
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0.45;
+    filter: grayscale(1);
+    transition: opacity 0.15s, background 0.15s, filter 0.15s, transform 0.1s;
+  }
+  .stats-sick-btn:hover { opacity: 0.9; filter: grayscale(0); }
+  .stats-sick-btn:active { transform: scale(0.9); }
+  .stats-sick-btn.active {
+    opacity: 1;
+    filter: none;
+    background: rgba(230, 168, 60, 0.18);
+    border-color: rgba(230, 168, 60, 0.55);
+  }
+  .stats-mini-day-row.sick .stats-mini-day-date { color: var(--text-dim); text-decoration: line-through; opacity: 0.7; }
+  .stats-mini-day-sicklabel {
+    flex: 1 1 auto;
+    font-size: 10px;
+    font-weight: 600;
+    color: #e0a83c;
+    letter-spacing: 0.02em;
+  }
+  .stats-row-sick-tag {
+    display: inline-block;
+    margin-left: 6px;
+    font-size: 9px;
+    font-weight: 700;
+    color: #e0a83c;
+    letter-spacing: 0.01em;
+  }
   .stats-row-date {
     font-family: 'JetBrains Mono', monospace;
     font-size: 11px;
@@ -2307,7 +2348,7 @@ function runDayBonus(iso) {
 // Perioden-Overall = Ø der Tages-Overalls → Bonus = (Σ Tages-Boni) ÷ periodDays.
 function runPeriodBonus(startIso, endIso, periodDays) {
   let sum = 0, d = startIso;
-  while (d <= endIso) { sum += runDayBonus(d); d = addDays(d, 1); }
+  while (d <= endIso) { if (!isSick(d)) sum += runDayBonus(d); d = addDays(d, 1); }
   return periodDays > 0 ? sum / periodDays : 0;
 }
 
@@ -2415,7 +2456,7 @@ function gymDayBonus(iso) {
 }
 function gymPeriodBonus(startIso, endIso, periodDays) {
   let sum = 0, d = startIso;
-  while (d <= endIso) { sum += gymDayBonus(d); d = addDays(d, 1); }
+  while (d <= endIso) { if (!isSick(d)) sum += gymDayBonus(d); d = addDays(d, 1); }
   return periodDays > 0 ? sum / periodDays : 0;
 }
 
@@ -2466,6 +2507,79 @@ function mergeGymFromCloud(cloudGym) {
     pushGym();
     return true;
   }
+  return false;
+}
+
+// ============================================================
+// KRANK-TAGE — Tage, die nicht fürs Wochen-/Monatsziel zählen
+// ============================================================
+// Ein Krank-Tag wird komplett aus der Wertung genommen: Er zählt weder als
+// erbrachte Leistung (Zähler) noch als Solltag (Nenner). Eine Woche mit z.B.
+// 2 Krank-Tagen muss also nur noch das Plansoll von 5 Tagen erfüllen.
+const SICK_STORAGE_KEY = 'sick_days_v1';
+const SICK_SYNC_KEY = 'sick';
+let sickState = { dates: {}, updatedAt: 0 }; // dates: { 'YYYY-MM-DD': true }
+let sickPushTimeout = null;
+
+function loadSick() {
+  try {
+    const raw = localStorage.getItem(SICK_STORAGE_KEY);
+    if (raw) {
+      const s = JSON.parse(raw);
+      sickState = { dates: (s && s.dates && typeof s.dates === 'object') ? s.dates : {}, updatedAt: s.updatedAt || 0 };
+    }
+  } catch (e) { console.warn('Load sick failed', e); sickState = { dates: {}, updatedAt: 0 }; }
+}
+loadSick();
+
+function persistSickLocal() {
+  try { localStorage.setItem(SICK_STORAGE_KEY, JSON.stringify(sickState)); }
+  catch (e) { console.error('Sick persist failed', e); }
+}
+function saveSick() {
+  sickState.updatedAt = Date.now();
+  persistSickLocal();
+  scheduleSickPush();
+}
+function isSick(iso) { return !!(sickState.dates && sickState.dates[iso]); }
+function toggleSick(iso) {
+  if (isSick(iso)) delete sickState.dates[iso];
+  else sickState.dates[iso] = true;
+  saveSick();
+}
+// Anzahl Krank-Tage im geschlossenen Intervall [startIso .. endIso].
+function countSick(startIso, endIso) {
+  let n = 0, d = startIso;
+  while (d <= endIso) { if (isSick(d)) n++; d = addDays(d, 1); }
+  return n;
+}
+
+// ---- Sync (eigener Firebase-Knoten .../sick) ----
+function scheduleSickPush() {
+  if (!initialSyncDone) return;
+  clearTimeout(sickPushTimeout);
+  sickPushTimeout = setTimeout(pushSick, 800);
+}
+async function pushSick() {
+  try {
+    await xhrPut(`${FIREBASE_URL}/tracker/${SYNC_CODE}/${SICK_SYNC_KEY}.json`, sickState);
+  } catch (e) { console.error('Sick push failed', e); }
+}
+// Krank-Tage sind eine Menge (kein Append-Log), deshalb "neuester Stand gewinnt"
+// über updatedAt — so propagieren auch Entfernungen zwischen den Geräten.
+function mergeSickFromCloud(cloudSick) {
+  if (!cloudSick || typeof cloudSick !== 'object') {
+    if (Object.keys(sickState.dates || {}).length > 0) pushSick();
+    return false;
+  }
+  const cloudDates = (cloudSick.dates && typeof cloudSick.dates === 'object') ? cloudSick.dates : {};
+  const cUpd = cloudSick.updatedAt || 0, lUpd = sickState.updatedAt || 0;
+  if (cUpd > lUpd) {
+    sickState = { dates: cloudDates, updatedAt: cUpd };
+    persistSickLocal();
+    return true;
+  }
+  if (lUpd > cUpd) pushSick(); // lokaler Stand ist neuer → Cloud nachziehen
   return false;
 }
 
@@ -2760,6 +2874,16 @@ async function pullFromCloudAll() {
       }
       if (mergeGymFromCloud(cloudGym)) anyChanged = true;
     } catch (e) { /* gym sync skip */ }
+
+    // Krank-Tage separat synchronisieren (eigener Knoten, nicht in TRACKERS)
+    try {
+      let cloudSick = bulkData ? bulkData[SICK_SYNC_KEY] : null;
+      if (!cloudSick) {
+        const cs = await xhrGet(`${FIREBASE_URL}/tracker/${SYNC_CODE}/${SICK_SYNC_KEY}.json?_t=${Date.now()}`);
+        if (cs.status === 200 && cs.text && cs.text !== 'null') cloudSick = JSON.parse(cs.text);
+      }
+      if (mergeSickFromCloud(cloudSick)) anyChanged = true;
+    } catch (e) { /* sick sync skip */ }
 
     if (anyChanged) entriesCollapse = null;
     render();
@@ -3645,6 +3769,9 @@ const MONTH_SEASON = {
 const MONTH_BADGE_KEY = 'month_badges_v1';
 // Welcher Monat ist in der Sammlung gerade aufgeklappt (null = keiner).
 let statsOpenMonthKey = null;
+// Welche Wochen (per Montags-ISO) sind aufgeklappt — bleibt über renderStats() erhalten,
+// z.B. wenn man einen Krank-Tag in der offenen Woche umschaltet.
+let statsOpenWeekMondays = new Set();
 
 function daysInMonth(year, month) { return new Date(year, month, 0).getDate(); } // month 1-12
 
@@ -3664,8 +3791,17 @@ function statsMonthlyBreakdown(dailyTotals, year, month) {
   const keys = Object.keys(TRACKERS);
   const dim = daysInMonth(year, month);
   const startDay = monthEvalStartDay(year, month);
-  const evalDays = dim - startDay + 1; // gewertete Tage (voller Monat = dim)
   const prefix = `${year}-${String(month).padStart(2,'0')}-`;
+  const startIso = prefix + String(startDay).padStart(2, '0');
+  const endIso = prefix + String(dim).padStart(2, '0');
+  // Krank-Tage aus der Wertung nehmen: gewertete Tage schrumpfen entsprechend.
+  const sickDays = countSick(startIso, endIso);
+  const evalDays = (dim - startDay + 1) - sickDays; // gewertete Tage (voller Monat = dim, minus Krank-Tage)
+  if (evalDays <= 0) {
+    const perCat = {};
+    for (const key of keys) perCat[key] = 100;
+    return { overall: 100, perCat, dim: 0, runBonus: 0, gymBonus: 0, sickDays };
+  }
   let sum = 0;
   const perCat = {};
   for (const key of keys) {
@@ -3673,17 +3809,17 @@ function statsMonthlyBreakdown(dailyTotals, year, month) {
     const byDate = dailyTotals[key];
     let monthTotal = 0;
     for (let d = startDay; d <= dim; d++) {
-      monthTotal += byDate[prefix + String(d).padStart(2,'0')] || 0;
+      const iso = prefix + String(d).padStart(2,'0');
+      if (isSick(iso)) continue;
+      monthTotal += byDate[iso] || 0;
     }
     const pct = (monthTotal / (tk.dailyBaseline * evalDays)) * 100;
     perCat[key] = pct;
     sum += pct;
   }
-  const startIso = prefix + String(startDay).padStart(2, '0');
-  const endIso = prefix + String(dim).padStart(2, '0');
   const runBonus = runPeriodBonus(startIso, endIso, evalDays);
   const gymBonus = gymPeriodBonus(startIso, endIso, evalDays);
-  return { overall: sum / keys.length + runBonus + gymBonus, perCat, dim: evalDays, runBonus, gymBonus };
+  return { overall: sum / keys.length + runBonus + gymBonus, perCat, dim: evalDays, runBonus, gymBonus, sickDays };
 }
 function statsMonthlyPct(dailyTotals, year, month) {
   return statsMonthlyBreakdown(dailyTotals, year, month).overall;
@@ -4026,24 +4162,36 @@ function statsDailyPct(dailyTotals, iso) {
   return { overall: sum / keys.length + runBonus + gymBonus, perCat, runBonus, gymBonus };
 }
 
-// % of the combined weekly plan (Mon-Sun) achieved for the week starting at mondayIso
+// % of the combined weekly plan (Mon-Sun) achieved for the week starting at mondayIso.
+// Krank-Tage werden komplett ausgeklammert: Das Wochensoll schrumpft auf die
+// gewerteten Tage (effDays = 7 − Krank-Tage). Eine voll "kranke" Woche gilt als 100 %.
 function statsWeeklyPct(dailyTotals, mondayIso) {
   const keys = Object.keys(TRACKERS);
+  const sundayIso = addDays(mondayIso, 6);
+  const sickDays = countSick(mondayIso, sundayIso);
+  const effDays = 7 - sickDays;
+  if (effDays <= 0) {
+    const perCat = {};
+    for (const key of keys) perCat[key] = 100;
+    return { overall: 100, perCat, runBonus: 0, gymBonus: 0, sickDays, effDays: 0 };
+  }
   let sum = 0;
   const perCat = {};
   for (const key of keys) {
     const tk = TRACKERS[key];
     let weekTotal = 0;
     for (let i = 0; i < 7; i++) {
-      weekTotal += dailyTotals[key][addDays(mondayIso, i)] || 0;
+      const d = addDays(mondayIso, i);
+      if (isSick(d)) continue;
+      weekTotal += dailyTotals[key][d] || 0;
     }
-    const pct = (weekTotal / (tk.dailyBaseline * 7)) * 100;
+    const pct = (weekTotal / (tk.dailyBaseline * effDays)) * 100;
     perCat[key] = pct;
     sum += pct;
   }
-  const runBonus = runPeriodBonus(mondayIso, addDays(mondayIso, 6), 7);
-  const gymBonus = gymPeriodBonus(mondayIso, addDays(mondayIso, 6), 7);
-  return { overall: sum / keys.length + runBonus + gymBonus, perCat, runBonus, gymBonus };
+  const runBonus = runPeriodBonus(mondayIso, sundayIso, effDays);
+  const gymBonus = gymPeriodBonus(mondayIso, sundayIso, effDays);
+  return { overall: sum / keys.length + runBonus + gymBonus, perCat, runBonus, gymBonus, sickDays, effDays };
 }
 
 // A week (given by its Monday) is "geschafft" once the overall average across ALL categories
@@ -4122,6 +4270,7 @@ function renderStats() {
 
   const weekRunEl = document.getElementById('statsWeekRunBonus');
   const bonusLines = [];
+  if (curWeek.sickDays > 0) bonusLines.push('&#x1F912; ' + curWeek.sickDays + ' Krank-Tag' + (curWeek.sickDays > 1 ? 'e' : '') + ' diese Woche &middot; Ziel z&auml;hlt nur ' + curWeek.effDays + ' Tage');
   if (curWeek.runBonus > 0.05) bonusLines.push('&#x1F3C3; Lauf-Bonus diese Woche: ' + fmtPP(curWeek.runBonus));
   if (curWeek.gymBonus > 0.05) bonusLines.push('&#x1F4AA; Studio-Bonus diese Woche: ' + fmtPP(curWeek.gymBonus));
   if (bonusLines.length) {
@@ -4137,7 +4286,7 @@ function renderStats() {
     return `<div class="stats-cat">
       <div class="stats-cat-name">${TRACKER_ICONS[key] || ''} ${tk.unit}</div>
       <div class="stats-cat-pct">${pct.toFixed(0)}%</div>
-      <div class="stats-cat-remaining">${statsRemainingLabel(curWeek.overall, key)}</div>
+      <div class="stats-cat-remaining">${statsRemainingLabel(curWeek.overall, key, curWeek.effDays)}</div>
     </div>`;
   }).join('');
 
@@ -4168,16 +4317,25 @@ function renderStats() {
       const complete = w.overall >= 100 - 1e-9;
       const barColor = complete ? 'var(--success)' : 'var(--accent)';
 
-      // Individual days of this week (Mon-Sun)
+      // Individual days of this week (Mon-Sun) — tap the icon to mark a sick day
       const daysHtml = Array.from({ length: 7 }, (_, i) => {
         const d = addDays(m, i);
-        const dp = statsDailyPct(dailyTotals, d).overall;
         const wd = WEEKDAY_SHORT[new Date(d).getDay()];
+        const dateLabel = `${wd} ${fmtDateDe(d).slice(0, 5)}`;
+        if (isSick(d)) {
+          return `<div class="stats-mini-day-row sick">
+            <div class="stats-mini-day-date">${dateLabel}</div>
+            <div class="stats-mini-day-sicklabel">&#x1F912; krank &middot; nicht gewertet</div>
+            <button class="stats-sick-btn active" data-sick="${d}" title="Krank-Markierung entfernen">&#x1F912;</button>
+          </div>`;
+        }
+        const dp = statsDailyPct(dailyTotals, d).overall;
         const dBarColor = dp >= 100 ? 'var(--success)' : 'var(--accent)';
         return `<div class="stats-mini-day-row">
-          <div class="stats-mini-day-date">${wd} ${fmtDateDe(d).slice(0, 5)}</div>
+          <div class="stats-mini-day-date">${dateLabel}</div>
           <div class="stats-row-bar-wrap small"><div class="stats-row-bar-fill" style="width:${Math.min(100, dp)}%;background:${dBarColor}"></div></div>
           <div class="stats-mini-day-pct">${dp.toFixed(0)}%</div>
+          <button class="stats-sick-btn" data-sick="${d}" title="Als Krank-Tag markieren (zählt nicht fürs Ziel)">&#x1F912;</button>
         </div>`;
       }).join('');
 
@@ -4186,11 +4344,15 @@ function renderStats() {
         return `<div class="stats-cat">
           <div class="stats-cat-name">${TRACKER_ICONS[key] || ''} ${tk.unit}</div>
           <div class="stats-cat-pct">${w.perCat[key].toFixed(0)}%</div>
-          <div class="stats-cat-remaining">${statsRemainingLabel(w.overall, key)}</div>
+          <div class="stats-cat-remaining">${statsRemainingLabel(w.overall, key, w.effDays)}</div>
         </div>`;
       }).join('');
 
-      return `<div class="stats-week-row ${complete ? 'complete' : ''}">
+      const openCls = statsOpenWeekMondays.has(m) ? ' open' : '';
+      const sickNote = w.sickDays > 0
+        ? `<span class="stats-row-sick-tag">&#x1F912; ${w.sickDays} Krank-Tag${w.sickDays > 1 ? 'e' : ''} &middot; Ziel auf ${w.effDays} Tage</span>`
+        : '';
+      return `<div class="stats-week-row ${complete ? 'complete' : ''}${openCls}" data-monday="${m}">
         <div class="stats-row-main">
           <div class="stats-row-date">${fmtDateDe(m)}&ndash;${fmtDateDe(addDays(m, 6))}</div>
           <div class="stats-row-bar-wrap"><div class="stats-row-bar-fill" style="width:${Math.min(100, w.overall)}%;background:${barColor}"></div></div>
@@ -4199,7 +4361,7 @@ function renderStats() {
           <div class="stats-row-caret">&#9662;</div>
         </div>
         <div class="stats-row-detail">
-          <div class="stats-detail-label">Tage dieser Woche</div>
+          <div class="stats-detail-label">Tage dieser Woche ${sickNote}</div>
           <div class="stats-mini-days">${daysHtml}</div>
           ${w.runBonus > 0.05 ? `<div class="stats-detail-label">&#x1F3C3; Lauf-Bonus: ${fmtPP(w.runBonus)}</div>` : ''}
           ${w.gymBonus > 0.05 ? `<div class="stats-detail-label">&#x1F4AA; Studio-Bonus: ${fmtPP(w.gymBonus)}</div>` : ''}
@@ -4429,12 +4591,34 @@ document.getElementById('importFile').addEventListener('change', e => {
 
 document.getElementById('authBtn').addEventListener('click', showSyncSetup);
 
-// Expandable category breakdown per week row (delegated click)
+// Krank-Tag umschalten: nimmt den Tag komplett aus der Wochen-/Monatswertung.
+function toggleSickDay(iso) {
+  toggleSick(iso);
+  // Statistik neu rechnen (Wochen-, Monats- & Badge-Stände) — offene Woche bleibt offen.
+  renderStats();
+}
+window.toggleSickDay = toggleSickDay;
+
+// Expandable category breakdown per week row + Krank-Tag-Toggle (delegated click)
 document.getElementById('statsWeekList').addEventListener('click', (e) => {
+  // 1) Klick auf den Krank-Button in einer Tageszeile
+  const sickBtn = e.target.closest('[data-sick]');
+  if (sickBtn) {
+    e.stopPropagation();
+    toggleSickDay(sickBtn.dataset.sick);
+    return;
+  }
+  // 2) Klick auf die Wochenzeile → auf-/zuklappen (Zustand merken)
   const main = e.target.closest('.stats-row-main');
   if (!main) return;
   const row = main.closest('.stats-week-row');
-  if (row) row.classList.toggle('open');
+  if (!row) return;
+  row.classList.toggle('open');
+  const mk = row.dataset.monday;
+  if (mk) {
+    if (row.classList.contains('open')) statsOpenWeekMondays.add(mk);
+    else statsOpenWeekMondays.delete(mk);
+  }
 });
 
 // Aufklappbare Monats-Badges: Klick auf eine Medaille zeigt die Rest-Aufschlüsselung.
